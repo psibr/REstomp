@@ -3,7 +3,7 @@
   "version": 2,
   "targets": {
     ".NETFramework,Version=v4.5.2": {},
-    ".NETStandard,Version=v1.5": {
+    ".NETStandard,Version=v1.3": {
       "Microsoft.CSharp/4.0.1": {
         "type": "package",
         "dependencies": {
@@ -119,7 +119,7 @@
           "System.Runtime": "4.1.0"
         },
         "compile": {
-          "ref/netstandard1.5/_._": {}
+          "ref/netstandard1.3/_._": {}
         },
         "runtime": {
           "lib/portable-net45+win8+wpa81/_._": {}
@@ -175,7 +175,7 @@
           "System.Threading.Tasks": "4.0.11"
         },
         "compile": {
-          "ref/netstandard1.5/System.IO.dll": {}
+          "ref/netstandard1.3/System.IO.dll": {}
         },
         "runtime": {
           "lib/portable-net45+win8+wp8+wpa81/_._": {}
@@ -262,7 +262,7 @@
           "System.Runtime": "4.1.0"
         },
         "compile": {
-          "ref/netstandard1.5/System.Reflection.dll": {}
+          "ref/netstandard1.3/System.Reflection.dll": {}
         },
         "runtime": {
           "lib/portable-net45+win8+wp8+wpa81/_._": {}
@@ -334,10 +334,7 @@
           "System.Runtime": "4.1.0"
         },
         "compile": {
-          "ref/netstandard1.5/_._": {}
-        },
-        "runtime": {
-          "lib/netstandard1.5/System.Reflection.TypeExtensions.dll": {}
+          "ref/netstandard1.3/_._": {}
         }
       },
       "System.Resources.ResourceManager/4.0.1": {
@@ -363,7 +360,7 @@
           "Microsoft.NETCore.Targets": "1.0.1"
         },
         "compile": {
-          "ref/netstandard1.5/System.Runtime.dll": {}
+          "ref/netstandard1.3/System.Runtime.dll": {}
         },
         "runtime": {
           "lib/portable-net45+win8+wp80+wpa81/_._": {}
@@ -377,7 +374,7 @@
           "System.Runtime": "4.1.0"
         },
         "compile": {
-          "ref/netstandard1.5/_._": {}
+          "ref/netstandard1.3/_._": {}
         },
         "runtime": {
           "lib/portable-net45+win8+wp8+wpa81/_._": {}
@@ -405,7 +402,7 @@
           "System.Runtime.Handles": "4.0.1"
         },
         "compile": {
-          "ref/netstandard1.5/_._": {}
+          "ref/netstandard1.3/_._": {}
         },
         "runtime": {
           "lib/portable-net45+win8+wpa81/_._": {}
@@ -2264,7 +2261,7 @@
     ".NETFramework,Version=v4.5.2": [
       "System.Xml"
     ],
-    ".NETStandard,Version=v1.5": [
+    ".NETStandard,Version=v1.3": [
       "Microsoft.CSharp >= 4.0.1",
       "System.Collections.Concurrent >= 4.0.12",
       "System.Console >= 4.0.0",
