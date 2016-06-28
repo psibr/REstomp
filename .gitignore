@@ -188,3 +188,4 @@ src/REstate.Service.AdminUI/wwwroot/app/*.js.map
 /src/REstate.Service.AdminUI/wwwroot/.vscode/.browse.VC.db
 /.vscode/.browse.VC.db
 /plugins/**/
+*.xml
