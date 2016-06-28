@@ -6,7 +6,7 @@ namespace REstomp.Runner
     {
         public static void Main(string[] args)
         {
-            using(var reStompService = new REstomp.StompService(System.Net.IPAddress.Parse("127.0.0.1"), 5467))
+            using(var reStompService = new StompService(System.Net.IPAddress.Parse("127.0.0.1"), 5467))
             {
                 reStompService.Start();
 
