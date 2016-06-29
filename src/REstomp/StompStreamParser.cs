@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -88,6 +89,8 @@ namespace REstomp
                     commandString = parsedCommandString;
             }
 
+            if(commandString == null) throw new CommandStringParseException();
+            
             return commandString;
         }
     }

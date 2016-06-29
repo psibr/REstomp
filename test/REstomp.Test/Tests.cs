@@ -39,7 +39,7 @@ namespace REstomp.Test
             select new object[] { command, eol };
 
         public static IEnumerable<object[]> LowerCaseCommandData =>
-            CommandData.Select(objects => new []
+            CommandData.Select(objects => new[]
             {
                 (objects[0] as string).ToLower(), objects[1]
             });
@@ -47,7 +47,7 @@ namespace REstomp.Test
         [Theory(DisplayName = "Command Parses"),
             MemberData("CommandData")]
         [Trait("Category", "Parser")]
-        public void CommandParser(string command, string eol)
+        public async void CommandParser(string command, string eol)
         {
             using (var memStream = new MemoryStream())
             using (var streamWriter = new StreamWriter(memStream))
@@ -64,7 +64,7 @@ namespace REstomp.Test
 
                 var parser = new StompStreamParser(memStream);
 
-                var parsedCommand = parser.ReadStompCommand(CancellationToken.None).Result;
+                var parsedCommand = await parser.ReadStompCommand(CancellationToken.None);
 
                 Assert.StrictEqual(command, parsedCommand);
             }
@@ -73,27 +73,28 @@ namespace REstomp.Test
         [Theory(DisplayName = "Command Parser is case-sensitive"),
             MemberData("LowerCaseCommandData")]
         [Trait("Category", "Parser")]
-        public void CommandParserIsCaseSensitive(string command, string eol)
+        public async void CommandParserIsCaseSensitive(string command, string eol)
         {
-            using (var memStream = new MemoryStream())
-            using (var streamWriter = new StreamWriter(memStream))
+            await Assert.ThrowsAsync<CommandStringParseException>(async () =>
             {
-                streamWriter.Write(command);
-                streamWriter.Write(eol);
-                streamWriter.Write("version:1.2");
-                streamWriter.Write(eol);
-                streamWriter.Write(eol);
-                streamWriter.Write(0x00);
-                streamWriter.Flush();
+                using (var memStream = new MemoryStream())
+                using (var streamWriter = new StreamWriter(memStream))
+                {
+                    streamWriter.Write(command);
+                    streamWriter.Write(eol);
+                    streamWriter.Write("version:1.2");
+                    streamWriter.Write(eol);
+                    streamWriter.Write(eol);
+                    streamWriter.Write(0x00);
+                    streamWriter.Flush();
 
-                memStream.Position = 0;
+                    memStream.Position = 0;
 
-                var parser = new StompStreamParser(memStream);
+                    var parser = new StompStreamParser(memStream);
 
-                var parsedCommand = parser.ReadStompCommand(CancellationToken.None).Result;
-
-                Assert.Equal(null, parsedCommand);
-            }
+                    var parsedCommand = await parser.ReadStompCommand(CancellationToken.None);
+                }
+            });
         }
     }
 }
