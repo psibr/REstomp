@@ -88,6 +88,8 @@ namespace REstomp
                     commandString = parsedCommandString;
             }
 
+            if(commandString == null) throw new CommandStringParseException();
+
             return commandString;
         }
     }
