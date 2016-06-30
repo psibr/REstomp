@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace REstomp
 {
-    public class StompStreamParser
+    public static class StompStreamParser
     {
         public static readonly string[] SupportedCommands = {
             "STOMP",
@@ -26,19 +27,53 @@ namespace REstomp
             "RECEIPT"
         };
 
-        protected Stream Stream { get; set; }
-
-        public StompStreamParser(Stream stream)
+        /// <summary>
+        /// Reads a STOMP command string asynchronyously.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="frame"></param>
+        /// <returns>CommandString if read; otherwise null</returns>
+        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(TStream stream, StompFrame frame)
+            where TStream : Stream
         {
-            Stream = stream;
+            return await ReadStompCommand(stream, frame, CancellationToken.None)
+                .ConfigureAwait(false);
         }
 
         /// <summary>
         /// Reads a STOMP command string asynchronyously.
         /// </summary>
+        /// <param name="stream"></param>
+        /// <returns>CommandString if read; otherwise null</returns>
+        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(TStream stream)
+            where TStream : Stream
+        {
+            return await ReadStompCommand(stream, new StompFrame(null), CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Reads a STOMP command string asynchronyously.
+        /// </summary>
+        /// <param name="stream"></param>
         /// <param name="cancellationToken"></param>
         /// <returns>CommandString if read; otherwise null</returns>
-        public async Task<string> ReadStompCommand(CancellationToken cancellationToken)
+        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(TStream stream, CancellationToken cancellationToken)
+            where TStream : Stream
+        {
+            return await ReadStompCommand(stream, new StompFrame(null), cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Reads a STOMP command string asynchronyously.
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <param name="frame"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>CommandString if read; otherwise null</returns>
+        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(TStream stream, StompFrame frame, CancellationToken cancellationToken)
+            where TStream : Stream
         {
             string commandString = null;
 
@@ -60,7 +95,7 @@ namespace REstomp
                 const int length = 1;
                 var bytesFound = 0;
 
-                bytesFound += await Stream.ReadAsync(commandBuffer, offset, length, cancellationToken);
+                bytesFound += await stream.ReadAsync(commandBuffer, offset, length, cancellationToken);
 
                 //check for EOL in the bytes we read. (1 iteration since length is const of 1)
                 for (var i = offset; i < offset + bytesFound; i++)
@@ -86,11 +121,14 @@ namespace REstomp
 
                 if (SupportedCommands.Contains(parsedCommandString))
                     commandString = parsedCommandString;
+
             }
 
-            if(commandString == null) throw new CommandStringParseException();
+            if (commandString == null) throw new CommandStringParseException();
 
-            return commandString;
+            var newFrame = new StompFrame(commandString, frame.Headers, frame.Body);
+
+            return new Tuple<TStream, StompFrame>(stream, newFrame);
         }
     }
 }
