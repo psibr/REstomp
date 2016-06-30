@@ -189,3 +189,5 @@ src/REstate.Service.AdminUI/wwwroot/app/*.js.map
 /.vscode/.browse.VC.db
 /plugins/**/
 *.xml
+
+project.lock.json
