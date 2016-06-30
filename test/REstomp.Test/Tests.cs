@@ -39,14 +39,16 @@ namespace REstomp.Test
             select new object[] { command, eol };
 
         public static IEnumerable<object[]> LowerCaseCommandData =>
+
             CommandData.Select(objects => new[]
             {
-                (objects[0] as string).ToLower(), objects[1]
+                ((string) objects[0]).ToLower(), objects[1]
             });
 
         [Theory(DisplayName = "Command Parses"),
-            MemberData("CommandData")]
+            MemberData(nameof(CommandData))]
         [Trait("Category", "Parser")]
+
         public async void CommandParser(string command, string eol)
         {
             using (var memStream = new MemoryStream())
@@ -62,16 +64,14 @@ namespace REstomp.Test
 
                 memStream.Position = 0;
 
-                var parser = new StompStreamParser(memStream);
+                var parsedCommand = await StompStreamParser.ReadStompCommand(memStream, CancellationToken.None);
 
-                var parsedCommand = await parser.ReadStompCommand(CancellationToken.None);
-
-                Assert.StrictEqual(command, parsedCommand);
+                Assert.StrictEqual(command, parsedCommand.Item2.CommandString);
             }
         }
 
         [Theory(DisplayName = "Command Parser is case-sensitive"),
-            MemberData("LowerCaseCommandData")]
+            MemberData(nameof(LowerCaseCommandData))]
         [Trait("Category", "Parser")]
         public async void CommandParserIsCaseSensitive(string command, string eol)
         {
@@ -90,9 +90,7 @@ namespace REstomp.Test
 
                     memStream.Position = 0;
 
-                    var parser = new StompStreamParser(memStream);
-
-                    var parsedCommand = await parser.ReadStompCommand(CancellationToken.None);
+                    await StompStreamParser.ReadStompCommand(memStream, CancellationToken.None);
                 }
             });
         }

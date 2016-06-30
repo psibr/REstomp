@@ -35,14 +35,13 @@ namespace REstomp
                     Connections.Add(tcpClientTask.Result);
 
                     var netStream = tcpClientTask.Result.GetStream();
-
-                    var stompParser = new StompStreamParser(netStream);
-
                     //Begin negotiate
 
-                    var commandString = await stompParser.ReadStompCommand(CancellationToken.None);
+                    var streamAndFrame = await StompStreamParser.ReadStompCommand(netStream, CancellationToken.None);
 
-                    if (commandString == null)
+
+
+                    if (streamAndFrame.Item2.CommandString == null)
                         throw new Exception();
 
                     var headers = new Dictionary<string, string>();
@@ -117,7 +116,7 @@ namespace REstomp
                     var bodyBuilder = new List<byte>();
 
                     if (new[] { "SEND", "MESSAGE", "ERROR" }
-                        .Contains(commandString))
+                        .Contains(streamAndFrame.Item2.CommandString))
                     {
                         var contentLength = -1;
                         var bodyBytesRead = 0;
