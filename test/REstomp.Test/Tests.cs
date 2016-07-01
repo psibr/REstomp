@@ -95,10 +95,10 @@ namespace REstomp.Test
         [Fact(DisplayName = "StompFrame With Command")]
         public void StompFrameWithCommand()
         {
-            var expectation = new StompFrame(StompParser.Commands.CONNECT);
+            var expectation = new StompFrame(StompParser.Command.CONNECT);
 
             var newFrame = StompFrame.Empty
-                .With(frame => frame.Command, StompParser.Commands.CONNECT);
+                .With(frame => frame.Command, StompParser.Command.CONNECT);
 
             Assert.NotNull(newFrame);
             Assert.Equal(expectation.Command, newFrame.Command);

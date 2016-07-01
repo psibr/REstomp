@@ -9,7 +9,7 @@ namespace REstomp
 {
     public static class StompParser
     {
-        public static class Commands
+        public static class Command
         {
             private static readonly string[] SupportedCommands =
             {
@@ -63,7 +63,7 @@ namespace REstomp
         /// <typeparam name="TStream">The type of the stream.</typeparam>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
-        /// <returns>CommandString if read; otherwise null</returns>
+        /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
         public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
             TStream stream, StompFrame stompFrame) where TStream : Stream
         {
@@ -76,7 +76,7 @@ namespace REstomp
         /// </summary>
         /// <typeparam name="TStream">The type of the stream.</typeparam>
         /// <param name="stream">The stream to read from.</param>
-        /// <returns>CommandString if read; otherwise null</returns>
+        /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
         public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
             TStream stream) where TStream : Stream
         {
@@ -90,7 +90,7 @@ namespace REstomp
         /// <typeparam name="TStream">The type of the stream.</typeparam>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>CommandString if read; otherwise null</returns>
+        /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
         public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
             TStream stream, CancellationToken cancellationToken) where TStream : Stream
         {
@@ -105,7 +105,7 @@ namespace REstomp
         /// <param name="stream">The stream to read from.</param>
         /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
-        /// <returns>CommandString if read; otherwise null</returns>
+        /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
         /// <exception cref="CommandParseException"></exception>
         public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
             TStream stream, StompFrame stompFrame, CancellationToken cancellationToken)
@@ -176,10 +176,10 @@ namespace REstomp
                 }
 
                 //Convert bytes to string in UTF-8 from beginning to start of EOL
-                var parsedCommandString = Encoding.UTF8.GetString(commandBuffer, 0, eolIndex);
+                var parsedCommand = Encoding.UTF8.GetString(commandBuffer, 0, eolIndex);
 
-                if (Commands.IsSupported(parsedCommandString))
-                    command = parsedCommandString;
+                if (Command.IsSupported(parsedCommand))
+                    command = parsedCommand;
             }
 
             if (command == null) throw new CommandParseException();
