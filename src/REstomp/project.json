@@ -12,6 +12,7 @@
         "define": [ "CORE" ]
       },
       "dependencies": {
+        
         "Microsoft.CSharp": "4.0.1",
         "System.Collections.Concurrent": "4.0.12",
         "System.Console": "4.0.0",
@@ -23,12 +24,13 @@
       },
       "imports": [
         "dotnet54",
+        "dnxcore50",
         "portable-net451+win8"
       ]
     },
-    "net452": {
+    "net45": {
       "frameworkAssemblies": {
-        "System.Xml": { "type": "build" }
+        "System.Xml": { "type": "build" }, "System.Collections.Concurrent": "4.0.0.0"
       }
     }
   }

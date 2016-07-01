@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Threading;
 using Xunit;
 
 namespace REstomp.Test
@@ -64,9 +61,9 @@ namespace REstomp.Test
 
                 memStream.Position = 0;
 
-                var parsedCommand = await StompStreamParser.ReadStompCommand(memStream, CancellationToken.None);
+                var parsedCommand = await StompParser.ReadStompCommand(memStream);
 
-                Assert.StrictEqual(command, parsedCommand.Item2.CommandString);
+                Assert.StrictEqual(command, parsedCommand.Item2.Command);
             }
         }
 
@@ -75,7 +72,7 @@ namespace REstomp.Test
         [Trait("Category", "Parser")]
         public async void CommandParserIsCaseSensitive(string command, string eol)
         {
-            await Assert.ThrowsAsync<CommandStringParseException>(async () =>
+            await Assert.ThrowsAsync<CommandParseException>(async () =>
             {
                 using (var memStream = new MemoryStream())
                 using (var streamWriter = new StreamWriter(memStream))
@@ -90,9 +87,24 @@ namespace REstomp.Test
 
                     memStream.Position = 0;
 
-                    await StompStreamParser.ReadStompCommand(memStream, CancellationToken.None);
+                    await StompParser.ReadStompCommand(memStream);
                 }
             });
+        }
+
+        [Fact(DisplayName = "StompFrame With Command")]
+        public void StompFrameWithCommand()
+        {
+            var expectation = new StompFrame(StompParser.Commands.CONNECT);
+
+            var newFrame = StompFrame.Empty
+                .With(frame => frame.Command, StompParser.Commands.CONNECT);
+
+            Assert.NotNull(newFrame);
+            Assert.Equal(expectation.Command, newFrame.Command);
+
+            Assert.Empty(newFrame.Headers);
+            Assert.True(newFrame.Body.IsDefault);
         }
     }
 }

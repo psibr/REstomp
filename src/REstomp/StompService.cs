@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Threading;
 
 namespace REstomp
 {
@@ -17,13 +17,16 @@ namespace REstomp
         private IList<TcpClient> NegotiatedConnections { get; } = new List<TcpClient>();
 
         public StompService(IPAddress ipAddress, int port)
-        {          
+        {
             var endpoint = new IPEndPoint(ipAddress, port);
             Listener = new TcpListener(endpoint);
         }
 
         public void Start()
         {
+            StompFrame.Empty
+                .With(frame => frame.Command, StompParser.Commands.CONNECTED);
+
             Listener.Start(100);
 
             var acceptTask = Listener.AcceptTcpClientAsync();
@@ -37,12 +40,7 @@ namespace REstomp
                     var netStream = tcpClientTask.Result.GetStream();
                     //Begin negotiate
 
-                    var streamAndFrame = await StompStreamParser.ReadStompCommand(netStream, CancellationToken.None);
-
-
-
-                    if (streamAndFrame.Item2.CommandString == null)
-                        throw new Exception();
+                    var streamAndFrame = await StompParser.ReadStompCommand(netStream);
 
                     var headers = new Dictionary<string, string>();
                     var headerAndBodyBuffer = new byte[20];
@@ -75,7 +73,7 @@ namespace REstomp
                             }
                         }
 
-                        for (int i = parserIndex; i < bytesFound; i++)
+                        for (var i = parserIndex; i < bytesFound; i++)
                         {
                             parserIndex = i + 1;
 
@@ -106,17 +104,19 @@ namespace REstomp
                     var headerSegments = headerContents.Select(line =>
                         Encoding.UTF8.GetString(line.ToArray()).Split(':'));
 
-                    foreach (var segments in headerSegments)
+                    //Add header if key not already added (first come, first-only served)
+                    foreach (var segments in headerSegments
+                        .Where(segments => !headers.ContainsKey(segments[0])))
                     {
-                        //Add header if key not already added (first come, first-only served)
-                        if (!headers.ContainsKey(segments[0]))
-                            headers.Add(segments[0], segments[1]);
+                        headers.Add(segments[0], segments[1]);
                     }
+                    
+                    streamAndFrame = Tuple.Create(streamAndFrame.Item1, streamAndFrame.Item2
+                        .With(frame => frame.Headers, headers.ToImmutableDictionary()));
 
                     var bodyBuilder = new List<byte>();
 
-                    if (new[] { "SEND", "MESSAGE", "ERROR" }
-                        .Contains(streamAndFrame.Item2.CommandString))
+                    if (StompParser.Commands.CanHaveBody(streamAndFrame.Item2.Command))
                     {
                         var contentLength = -1;
                         var bodyBytesRead = 0;
@@ -128,7 +128,7 @@ namespace REstomp
                                 throw new Exception(); //ERROR frame, content-length not assignable to int
 
                         //transfer unused header bytes to body
-                        for (int i = parserIndex; i < bytesFound; i++)
+                        for (var i = parserIndex; i < bytesFound; i++)
                         {
                             bodyBuilder.Add(headerAndBodyBuffer[i]);
                         }
