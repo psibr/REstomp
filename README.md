@@ -25,28 +25,28 @@ libraries to enable working with STOMP in .NET in an effortless manner.
  
 
 
- The STOMP specification is a liberal specification for server implmentation, 
- which allows us to *hopefully* build a system of reSTOMP middleware for controlling 
- advanced broker features such as:
+The STOMP specification is a liberal specification for server implmentation, 
+which allows us to *hopefully* build a system of reSTOMP middleware for controlling 
+advanced broker features such as:
 
- - Message Persistance
- - Authentication
- - Authorization
- - Routing
- - Heart-Beats (keep-alives)
- - Queuing
+- Message Persistance
+- Authentication
+- Authorization
+- Routing
+- Heart-Beats (keep-alives)
+- Queuing
 
 
 
- ## Why Now
+## Why Now
 
- With .NET moving cross-platform and the emergence of micro-service environments, 
- one thing missing is a consistent mode of inter-communication. 
- HTTP is todays de-facto standard on .NET with other Service Bus options often 
- getting complicated or requiring a heavy dependence. 
- The aim of reSTOMP is to minimize the effort and topological complexity of a messaging 
- system.
+With .NET moving cross-platform and the emergence of micro-service environments, 
+one thing missing is a consistent mode of inter-communication. 
+HTTP is todays de-facto standard on .NET with other Service Bus options often 
+getting complicated or requiring a heavy dependence. 
+The aim of reSTOMP is to minimize the effort and topological complexity of a messaging 
+system.
 
- One primary design goal for this project is enabling **each** micro-service to self-host 
- a STOMP broker and perform direct communication instead of a centrallized broker. 
- This feels more in line with the distributed mentality.
+One primary design goal for this project is enabling **each** micro-service to self-host 
+a STOMP broker and perform direct communication instead of a centrallized broker. 
+This feels more in line with the distributed mentality.
