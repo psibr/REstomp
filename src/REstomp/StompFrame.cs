@@ -47,7 +47,7 @@ namespace REstomp
         public StompFrame With<TMember>(Expression<Func<StompFrame, TMember>> mutationSelectorExpression, TMember value)
         {
             var memberName = ((MemberExpression)mutationSelectorExpression.Body).Member.Name;
-            var commandString = Command;
+            var command = Command;
             var headers = Headers;
             var body = Body;
 
@@ -56,7 +56,7 @@ namespace REstomp
             switch (memberName)
             {
                 case nameof(Command):
-                    commandString = (string)obj;
+                    command = (string)obj;
                     break;
                 case nameof(Headers):
                     headers = (ImmutableDictionary<string, string>)obj;
@@ -66,7 +66,7 @@ namespace REstomp
                     break;
             }
 
-            return new StompFrame(commandString, headers, body);
+            return new StompFrame(command, headers, body);
         }
 
     }

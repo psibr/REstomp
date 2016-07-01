@@ -25,7 +25,7 @@ namespace REstomp
         public void Start()
         {
             StompFrame.Empty
-                .With(frame => frame.Command, StompParser.Commands.CONNECTED);
+                .With(frame => frame.Command, StompParser.Command.CONNECTED);
 
             Listener.Start(100);
 
@@ -116,7 +116,7 @@ namespace REstomp
 
                     var bodyBuilder = new List<byte>();
 
-                    if (StompParser.Commands.CanHaveBody(streamAndFrame.Item2.Command))
+                    if (StompParser.Command.CanHaveBody(streamAndFrame.Item2.Command))
                     {
                         var contentLength = -1;
                         var bodyBytesRead = 0;
