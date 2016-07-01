@@ -24,6 +24,7 @@ libraries to enable working with STOMP in .NET in an effortless manner.
 - reSTOMP - A server-as-a-library solution similar to OWIN for STOMP connections 
  
 
+
  The STOMP specification is a liberal specification for server implmentation, 
  which allows us to *hopefully* build a system of reSTOMP middleware for controlling 
  advanced broker features such as:
@@ -34,6 +35,7 @@ libraries to enable working with STOMP in .NET in an effortless manner.
  - Routing
  - Heart-Beats (keep-alives)
  - Queuing
+
 
 
  ## Why Now
