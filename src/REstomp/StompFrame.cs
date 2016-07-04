@@ -11,23 +11,25 @@ namespace REstomp
         {
             Command = command;
             Headers = headers?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
-            Body = body.ToImmutableArray();
+
+            if(body != null)
+                Body = body.ToImmutableArray();
         }
 
         public StompFrame(string command, IDictionary<string, string> headers, ImmutableArray<byte> body)
         {
             Command = command;
             Headers = headers?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
-            Body = body.ToImmutableArray();
+            Body = body;
         }
 
         public StompFrame(string command, IDictionary<string, string> headers)
-            : this(command, headers, new byte[0])
+            : this(command, headers, null)
         {
         }
 
         public StompFrame(string command)
-            : this(command, ImmutableDictionary<string, string>.Empty, new byte[0])
+            : this(command, ImmutableDictionary<string, string>.Empty, null)
         {
         }
 
