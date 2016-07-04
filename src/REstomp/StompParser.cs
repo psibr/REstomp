@@ -281,7 +281,6 @@ namespace REstomp
 
             while (true)
             {
-                //check the status of the cancellation token
                 //Check for cancellation and attempt to handle it gracefully.
                 try
                 {
@@ -370,7 +369,7 @@ namespace REstomp
                 Buffer.BlockCopy(headerBuffer, parserIndex, relevantBytes, 0,
                     bytesFound - parserIndex);
 
-                //get ALLLLLLLL of the bytes we've read and put them in an array
+                //get ALLLLLLLL of the bytes we've found and put them in an array
                 var readBytes = headerContents
                         .SelectMany(list => list)
                         .Union(headerLine)
@@ -397,5 +396,139 @@ namespace REstomp
 
             return Tuple.Create(stream, frameWithHeaders, bodyBuffer);
         }
+
+        //TODO: add overloads
+
+        /// <summary>
+        /// Reads a STOMP body block asynchronyously.
+        /// </summary>
+        /// <typeparam name="TStream">The type of the stream.</typeparam>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
+        /// <param name="remainderBytes">The remainder bytes from header parsing.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A tuple of the Stream and the resultant StompFrame.</returns>
+        /// <exception cref="HeaderParseException"></exception>
+        public static async Task<Tuple<TStream, StompFrame>> ReadStompBody<TStream>(
+            TStream stream, StompFrame stompFrame, byte[] remainderBytes, CancellationToken cancellationToken)
+            where TStream : Stream
+        {
+            var originalStreamPosition = stream.Position;
+
+            //list of bytes that we read
+            var bodyList = new List<byte>();
+
+            //if we have a content-length header, we MUST read the number of bytes that the value specifies
+            var contentLength = -1;
+            var bodyBytesRead = 0;
+
+            //Attempt to find and use the content-length header.
+            string contentLengthHeaderValue;
+            if (stompFrame.Headers.TryGetValue("content-length", out contentLengthHeaderValue))
+                if (!int.TryParse(contentLengthHeaderValue, out contentLength))
+                    throw new ContentLengthException(); //ERROR frame, content-length not assignable to int
+
+            //add the remainder bytes to the body
+            bodyList.AddRange(remainderBytes);
+            bodyBytesRead += remainderBytes.Length;
+
+            //if our remainder was longer than content length, throw an exception
+            if(contentLength != -1 && remainderBytes.Length > contentLength)
+                throw new ContentLengthException();
+
+            //if we have content length, read that many bytes. the following byte must be 0x00
+            if (contentLength != -1)
+            {
+                //grab the remaining body and the following 0x00 null byte
+                var bodyLengthBuffer = new byte[contentLength - bodyBytesRead + 1];
+                var bytesFound = 0;
+                var parserIndex = 0;
+
+                //read from stream and add to bodyList until we've read the remaining body and 0x00 byte
+                while (bodyBytesRead < contentLength + 1)
+                {
+                    //Check for cancellation and attempt to handle it gracefully.
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                    catch (OperationCanceledException opEx)
+                    {
+                        try
+                        {
+                            stream.Position = originalStreamPosition;
+                        }
+                        catch (Exception)
+                        {
+                            // Nothing we can do here. Sad day.
+                        }
+
+                        //add the bytes that we read for a potential failsafe
+                        opEx.Data.Add("ConsumedBytes", bodyList);
+
+                        throw;
+                    }
+
+                    bytesFound += await stream.ReadAsync(bodyLengthBuffer, bytesFound, bodyLengthBuffer.Length - bytesFound, cancellationToken);
+
+                    for (var i = parserIndex; i < bytesFound; i++)
+                    {
+                        bodyList.Add(bodyLengthBuffer[i]);
+                    }
+                    bodyBytesRead = bytesFound + remainderBytes.Length;
+                    parserIndex = bytesFound;
+                }
+
+                //if the last byte wasn't actually 0x00, throw an exception
+                if (bodyList.Last() != 0x00)
+                    throw new ContentLengthException();
+            }
+            else
+            {
+                var bodyBuffer = new byte[20];
+                
+                //if we don't have a content length, just read until we find a 0x00 null byte
+                while (bodyList.Last() != 0x00)
+                {
+                    //Check for cancellation and attempt to handle it gracefully.
+                    try
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                    }
+                    catch (OperationCanceledException opEx)
+                    {
+                        try
+                        {
+                            stream.Position = originalStreamPosition;
+                        }
+                        catch (Exception)
+                        {
+                            // Nothing we can do here. Sad day.
+                        }
+
+                        //add the bytes that we read for a potential failsafe
+                        opEx.Data.Add("ConsumedBytes", bodyList);
+
+                        throw;
+                    }
+
+                    var bytesFound = await stream.ReadAsync(bodyBuffer, 0, bodyBuffer.Length, cancellationToken);
+
+                    for (int i = 0; i < bytesFound; i++)
+                    {
+                        if (bodyList.Last() != 0x00) bodyList.Add(bodyBuffer[i]);
+                        else break;
+                    }
+                }
+            }
+
+            //remove the trailing 0x00
+            bodyList.RemoveAt(bodyList.Count - 1);
+
+            var newFrame = stompFrame.With(frame => frame.Body, bodyList.ToImmutableArray());
+
+            return Tuple.Create(stream, newFrame);
+        }
+
     }
 }
