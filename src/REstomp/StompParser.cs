@@ -469,7 +469,7 @@ namespace REstomp
                         throw;
                     }
 
-                    bytesFound += await stream.ReadAsync(bodyLengthBuffer, bytesFound, bodyLengthBuffer.Length, cancellationToken);
+                    bytesFound += await stream.ReadAsync(bodyLengthBuffer, bytesFound, bodyLengthBuffer.Length - bytesFound, cancellationToken);
 
                     for (var i = parserIndex; i < bytesFound; i++)
                     {
