@@ -7,6 +7,8 @@ namespace REstomp
         public static PrependableStream<TStream> AsPrependableStream<TStream>(this TStream stream)
             where TStream : Stream
         {
+
+
             return new PrependableStream<TStream>(stream);
         }
     }

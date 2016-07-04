@@ -5,11 +5,13 @@ using System.Linq;
 
 namespace REstomp
 {
+
+
     public class PrependableStream<TStream> : Stream
         where TStream : Stream
     {
         protected TStream BaseStream { get; }
-        protected List<byte> PrependedBytes = new List<byte>();
+        protected IEnumerable<byte> PrependedBytes = new List<byte>();
 
         public PrependableStream(TStream baseStream)
         {
@@ -21,9 +23,32 @@ namespace REstomp
             BaseStream = baseStream;
         }
 
-        public virtual void Prepend(IEnumerable<byte> prependBytes)
+        /// <summary>
+        /// Add any set of bytes the the start of the stream.
+        /// </summary>
+        /// <param name="prependBytes"></param>
+        /// <param name="count"></param>
+        public virtual void Prepend(ICollection<byte> prependBytes, int count)
         {
-            PrependedBytes.AddRange(prependBytes);
+            Prepend(prependBytes.Take(count));
+        }
+
+        /// <summary>
+        /// Add any set of bytes the the start of the stream.
+        /// </summary>
+        /// <param name="prependBytes"></param>
+        public virtual void Prepend(ICollection<byte> prependBytes)
+        {
+            Prepend((IEnumerable<byte>)prependBytes);
+        }
+
+        /// <summary>
+        /// Add any set of bytes the the start of the stream.
+        /// </summary>
+        /// <param name="prependBytes"></param>
+        protected virtual void Prepend(IEnumerable<byte> prependBytes)
+        {
+            PrependedBytes = prependBytes.Union(PrependedBytes).ToList();
         }
 
         public override bool CanRead =>
@@ -34,11 +59,11 @@ namespace REstomp
         public override bool CanWrite => false;
 
         public override long Length =>
-            BaseStream.Length + PrependedBytes.Count;
+            BaseStream.Length + PrependedBytes.Count();
 
         public override long Position
         {
-            get { return BaseStream.Position - PrependedBytes.Count; }
+            get { return BaseStream.Position - PrependedBytes.Count(); }
 
             set { throw new NotSupportedException(); }
         }
@@ -60,13 +85,18 @@ namespace REstomp
             var bytesRead = 0;
             var prependedBytesRead = 0;
 
-            if (PrependedBytes.Count > 0)
+            if (PrependedBytes.Any())
             {
-                for (int i = 0; i < (count >= PrependedBytes.Count ? PrependedBytes.Count : count); i++)
+                var i = 0;
+                foreach (var prependedByte in PrependedBytes)
                 {
-                    buffer[offset + i] = PrependedBytes.ElementAt(i);
+                    if (i >= count) break;
 
+                    buffer[offset + i] = prependedByte;
+
+                    i++;
                     prependedBytesRead++;
+
                 }
             }
 
@@ -74,7 +104,7 @@ namespace REstomp
 
             bytesRead += BaseStream.Read(buffer, offset + bytesRead, count - bytesRead);
 
-            PrependedBytes.RemoveRange(0, prependedBytesRead);
+            PrependedBytes = PrependedBytes.Skip(prependedBytesRead).ToList();
 
             return bytesRead;
         }
@@ -93,5 +123,12 @@ namespace REstomp
         {
             throw new NotSupportedException();
         }
+
+        /// <summary>
+        /// Returns the original stream. Does NOT include prepended bytes.
+        /// </summary>
+        /// <returns>The base stream.</returns>
+        public TStream Unwrap() =>
+            BaseStream;
     }
 }

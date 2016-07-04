@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 
 namespace REstomp
 {
@@ -40,31 +41,13 @@ namespace REstomp
                     var netStream = tcpClientTask.Result.GetStream();
                     //Begin negotiate
 
-                    var streamAndFrame = await StompParser.ReadStompCommand(netStream);
+                    var streamAndFrame = await StompParser.ReadStompCommand(netStream.AsPrependableStream());
 
                     var headerParseResult =
                         await StompParser.ReadStompHeaders(streamAndFrame.Item1, streamAndFrame.Item2);
 
-                    var remainingBodyBuffer = headerParseResult.Item3;
-
-                    var bodyBuilder = new List<byte>();
-
-                    if (StompParser.Command.CanHaveBody(headerParseResult.Item2.Command))
-                    {
-                        var contentLength = -1;
-                        var bodyBytesRead = 0;
-
-                        //Attempt to find and use the content-length header.
-                        string contentLengthHeaderValue;
-                        if (headerParseResult.Item2.Headers.TryGetValue("content-length", out contentLengthHeaderValue))
-                            if (!int.TryParse(contentLengthHeaderValue, out contentLength))
-                                throw new Exception(); //ERROR frame, content-length not assignable to int
-
-                        //transfer unused header bytes to body
-                        bodyBuilder.AddRange(remainingBodyBuffer);
-
-                        //TODO: body building (get buff, get much buffer)
-                    }
+                    var bodyParseReault =
+                        await StompParser.ReadStompBody(headerParseResult.Item1, headerParseResult.Item2, CancellationToken.None);
                 }
 
                 //Not accepted. Protocol error. 
