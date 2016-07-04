@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -50,11 +52,11 @@ namespace REstomp
 
             // ReSharper restore InconsistentNaming
 
-            public static bool IsSupported(string command) => 
+            public static bool IsSupported(string command) =>
                 SupportedCommands.Contains(command);
 
             public static bool CanHaveBody(string command) =>
-                new[] {SEND, MESSAGE, ERROR}.Contains(command);
+                new[] { SEND, MESSAGE, ERROR }.Contains(command);
         }
 
         /// <summary>
@@ -131,7 +133,7 @@ namespace REstomp
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException opEx)
                 {
                     try
                     {
@@ -140,9 +142,10 @@ namespace REstomp
                     catch (Exception)
                     {
                         // Nothing we can do here. Sad day.
-
-                        //TODO: Could possibly create a StreamPrepender in this case?
                     }
+
+                    //add the bytes that we read for a potential failsafe
+                    opEx.Data.Add("ConsumedBytes", commandBuffer);
 
                     throw;
                 }
@@ -182,12 +185,217 @@ namespace REstomp
                     command = parsedCommand;
             }
 
-            if (command == null) throw new CommandParseException();
+            if (command == null)
+            {
+                var parseException = new CommandParseException();
+
+                //add the bytes that we read for a potential failsafe
+                parseException.Data.Add("ConsumedBytes", commandBuffer);
+                throw parseException;
+            }
 
             var newFrame = stompFrame
                 .With(frame => frame.Command, command);
 
             return Tuple.Create(stream, newFrame);
+        }
+
+
+        /// <summary>
+        /// Reads a STOMP header block asynchronyously.
+        /// </summary>
+        /// <typeparam name="TStream">The type of the stream.</typeparam>
+        /// <param name="stream">The stream to read from.</param>
+        /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
+        /// <exception cref="HeaderParseException"></exception>
+        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
+            TStream stream) where TStream : Stream
+        {
+            return await ReadStompHeaders(stream, StompFrame.Empty, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Reads a STOMP header block asynchronyously.
+        /// </summary>
+        /// <typeparam name="TStream">The type of the stream.</typeparam>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
+        /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
+        /// <exception cref="HeaderParseException"></exception>
+        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
+            TStream stream, StompFrame stompFrame) where TStream : Stream
+        {
+            return await ReadStompHeaders(stream, stompFrame, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Reads a STOMP header block asynchronyously.
+        /// </summary>
+        /// <typeparam name="TStream">The type of the stream.</typeparam>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
+        /// <exception cref="HeaderParseException"></exception>
+        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
+            TStream stream, CancellationToken cancellationToken) 
+            where TStream : Stream
+        {
+            return await ReadStompHeaders(stream, StompFrame.Empty, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// Reads a STOMP header block asynchronyously.
+        /// </summary>
+        /// <typeparam name="TStream">The type of the stream.</typeparam>
+        /// <param name="stream">The stream to read from.</param>
+        /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
+        /// <exception cref="HeaderParseException"></exception>
+        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
+            TStream stream, StompFrame stompFrame, CancellationToken cancellationToken)
+            where TStream : Stream
+        {
+            var originalStreamPosition = stream.Position;
+
+            //put our headers with values into a dictionary after parsing them
+            var headers = new Dictionary<string, string>();
+
+            var headerBuffer = new byte[20];
+            var bytesFound = 0;
+
+            //use eolsEncountered to determine when we move out of the headers and into the body
+            var eolsEncountered = 0;
+
+            //a single header line (before colon is parsed)
+            var headerLine = new List<byte>();
+
+            //a list of header lines
+            var headerContents = new List<List<byte>>();
+
+            //index of the next character we wish to read
+            var parserIndex = 0;
+
+            while (true)
+            {
+                //check the status of the cancellation token
+                //Check for cancellation and attempt to handle it gracefully.
+                try
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+                catch (OperationCanceledException opEx)
+                {
+                    try
+                    {
+                        stream.Position = originalStreamPosition;
+                    }
+                    catch (Exception)
+                    {
+                        // Nothing we can do here. Sad day.
+                    }
+
+                    var relevantBytes = new byte[bytesFound - parserIndex];
+                    Buffer.BlockCopy(headerBuffer, parserIndex, relevantBytes, 0,
+                        bytesFound - parserIndex);
+
+                    //get ALLLLLLLL of the bytes we've read and put them in an array
+                    var readBytes = headerContents
+                        .SelectMany(list => list)
+                        .Union(headerLine)
+                        .Union(relevantBytes)
+                        .ToArray();
+
+                    //add the bytes that we read for a potential failsafe
+                    opEx.Data.Add("ConsumedBytes", readBytes);
+
+                    throw;
+                }
+
+                //if this message does not contain more headers
+                //(that is, if we encountered two EOLs in a row)
+                if (eolsEncountered > 1) break;
+
+                //add more bytes if we got the entire way through our last netStream.Read
+                if (parserIndex == bytesFound)
+                {
+                    parserIndex = 0;
+
+                    bytesFound = await stream.ReadAsync(headerBuffer, 0, headerBuffer.Length, cancellationToken);
+                }
+
+                for (var i = parserIndex; i < bytesFound; i++)
+                {
+                    parserIndex = i + 1;
+
+                    //if this byte is LF
+                    if (headerBuffer[i] == 0x0a)
+                    {
+
+                        //add the line to contents and set eol to encountered
+                        if (headerLine.Any()) headerContents.Add(headerLine);
+                        headerLine = new List<byte>();
+
+                        eolsEncountered++;
+                        break;
+
+                    }
+                    //if the byte is not LF
+
+                    //if the character is not CR
+                    if (headerBuffer[i] != 0x0d)
+                    {
+                        //add the character and set eolEncountered to false
+                        headerLine.Add(headerBuffer[i]);
+                        eolsEncountered = 0;
+                    }
+                }
+            }
+
+            //split the headers and values
+            var headerSegments = headerContents.Select(line =>
+                        Encoding.UTF8.GetString(line.ToArray()).Split(':')).ToList();
+
+            //throw an exception if a header is null or white space or if a value is null
+            if (headerSegments.Any(segment =>
+                segment.Length != 2 
+                    || string.IsNullOrWhiteSpace(segment[0])))
+            {
+                var headerEx = new HeaderParseException();
+
+                var relevantBytes = new byte[bytesFound - parserIndex];
+                Buffer.BlockCopy(headerBuffer, parserIndex, relevantBytes, 0,
+                    bytesFound - parserIndex);
+
+                //get ALLLLLLLL of the bytes we've read and put them in an array
+                var readBytes = headerContents
+                        .SelectMany(list => list)
+                        .Union(headerLine)
+                        .Union(relevantBytes)
+                        .ToArray();
+
+                headerEx.Data.Add("ConsumedBytes", readBytes);
+                throw headerEx;
+            }
+
+            //Add header if key not already added (first come, first-only served)
+            foreach (var segments in headerSegments
+                .Where(segments => !headers.ContainsKey(segments[0])))
+            {
+                headers.Add(segments[0], segments[1]);
+            }
+
+            //create a Stomp Frame with headers
+            var frameWithHeaders = stompFrame.With(frame => frame.Headers, headers.ToImmutableDictionary());
+
+            //find the remaining bytes and put them at the front of an array so we don't lose part of the body
+            var bodyBuffer = new byte[bytesFound - parserIndex];
+            Buffer.BlockCopy(headerBuffer, parserIndex, bodyBuffer, 0, bytesFound - parserIndex);
+
+            return Tuple.Create(stream, frameWithHeaders, bodyBuffer);
         }
     }
 }
