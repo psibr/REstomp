@@ -66,8 +66,8 @@ namespace REstomp
         /// <param name="stream">The stream to read from.</param>
         /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
         /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
-        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
-            TStream stream, StompFrame stompFrame) where TStream : Stream
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompCommand<TStream>(
+            PrependableStream<TStream> stream, StompFrame stompFrame) where TStream : Stream
         {
             return await ReadStompCommand(stream, stompFrame, CancellationToken.None)
                 .ConfigureAwait(false);
@@ -79,8 +79,8 @@ namespace REstomp
         /// <typeparam name="TStream">The type of the stream.</typeparam>
         /// <param name="stream">The stream to read from.</param>
         /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
-        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
-            TStream stream) where TStream : Stream
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompCommand<TStream>(
+            PrependableStream<TStream> stream) where TStream : Stream
         {
             return await ReadStompCommand(stream, StompFrame.Empty, CancellationToken.None)
                 .ConfigureAwait(false);
@@ -93,8 +93,8 @@ namespace REstomp
         /// <param name="stream">The stream to read from.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
-        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
-            TStream stream, CancellationToken cancellationToken) where TStream : Stream
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompCommand<TStream>(
+            PrependableStream<TStream> stream, CancellationToken cancellationToken) where TStream : Stream
         {
             return await ReadStompCommand(stream, StompFrame.Empty, cancellationToken)
                 .ConfigureAwait(false);
@@ -109,8 +109,8 @@ namespace REstomp
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A tuple of the Stream and the resultant StompFrame</returns>
         /// <exception cref="CommandParseException"></exception>
-        public static async Task<Tuple<TStream, StompFrame>> ReadStompCommand<TStream>(
-            TStream stream, StompFrame stompFrame, CancellationToken cancellationToken)
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompCommand<TStream>(
+            PrependableStream<TStream> stream, StompFrame stompFrame, CancellationToken cancellationToken)
             where TStream : Stream
         {
             var originalStreamPosition = stream.Position;
@@ -133,19 +133,9 @@ namespace REstomp
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                 }
-                catch (OperationCanceledException opEx)
+                catch (OperationCanceledException)
                 {
-                    try
-                    {
-                        stream.Position = originalStreamPosition;
-                    }
-                    catch (Exception)
-                    {
-                        // Nothing we can do here. Sad day.
-                    }
-
-                    //add the bytes that we read for a potential failsafe
-                    opEx.Data.Add("ConsumedBytes", commandBuffer);
+                    stream.Prepend(commandBuffer, bytesRead);
 
                     throw;
                 }
@@ -187,11 +177,10 @@ namespace REstomp
 
             if (command == null)
             {
-                var parseException = new CommandParseException();
-
                 //add the bytes that we read for a potential failsafe
-                parseException.Data.Add("ConsumedBytes", commandBuffer);
-                throw parseException;
+                stream.Prepend(commandBuffer, bytesRead);
+
+                throw new CommandParseException();
             }
 
             var newFrame = stompFrame
@@ -208,8 +197,8 @@ namespace REstomp
         /// <param name="stream">The stream to read from.</param>
         /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
         /// <exception cref="HeaderParseException"></exception>
-        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
-            TStream stream) where TStream : Stream
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompHeaders<TStream>(
+            PrependableStream<TStream> stream) where TStream : Stream
         {
             return await ReadStompHeaders(stream, StompFrame.Empty, CancellationToken.None)
                 .ConfigureAwait(false);
@@ -223,8 +212,8 @@ namespace REstomp
         /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
         /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
         /// <exception cref="HeaderParseException"></exception>
-        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
-            TStream stream, StompFrame stompFrame) where TStream : Stream
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompHeaders<TStream>(
+            PrependableStream<TStream> stream, StompFrame stompFrame) where TStream : Stream
         {
             return await ReadStompHeaders(stream, stompFrame, CancellationToken.None)
                 .ConfigureAwait(false);
@@ -238,8 +227,8 @@ namespace REstomp
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
         /// <exception cref="HeaderParseException"></exception>
-        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
-            TStream stream, CancellationToken cancellationToken) 
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompHeaders<TStream>(
+            PrependableStream<TStream> stream, CancellationToken cancellationToken) 
             where TStream : Stream
         {
             return await ReadStompHeaders(stream, StompFrame.Empty, cancellationToken)
@@ -255,12 +244,10 @@ namespace REstomp
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
         /// <exception cref="HeaderParseException"></exception>
-        public static async Task<Tuple<TStream, StompFrame, byte[]>> ReadStompHeaders<TStream>(
-            TStream stream, StompFrame stompFrame, CancellationToken cancellationToken)
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompHeaders<TStream>(
+            PrependableStream<TStream> stream, StompFrame stompFrame, CancellationToken cancellationToken)
             where TStream : Stream
         {
-            var originalStreamPosition = stream.Position;
-
             //put our headers with values into a dictionary after parsing them
             var headers = new Dictionary<string, string>();
 
@@ -286,17 +273,8 @@ namespace REstomp
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                 }
-                catch (OperationCanceledException opEx)
+                catch (OperationCanceledException)
                 {
-                    try
-                    {
-                        stream.Position = originalStreamPosition;
-                    }
-                    catch (Exception)
-                    {
-                        // Nothing we can do here. Sad day.
-                    }
-
                     var relevantBytes = new byte[bytesFound - parserIndex];
                     Buffer.BlockCopy(headerBuffer, parserIndex, relevantBytes, 0,
                         bytesFound - parserIndex);
@@ -309,7 +287,7 @@ namespace REstomp
                         .ToArray();
 
                     //add the bytes that we read for a potential failsafe
-                    opEx.Data.Add("ConsumedBytes", readBytes);
+                    stream.Prepend(readBytes);
 
                     throw;
                 }
@@ -363,8 +341,6 @@ namespace REstomp
                 segment.Length != 2 
                     || string.IsNullOrWhiteSpace(segment[0])))
             {
-                var headerEx = new HeaderParseException();
-
                 var relevantBytes = new byte[bytesFound - parserIndex];
                 Buffer.BlockCopy(headerBuffer, parserIndex, relevantBytes, 0,
                     bytesFound - parserIndex);
@@ -376,8 +352,8 @@ namespace REstomp
                         .Union(relevantBytes)
                         .ToArray();
 
-                headerEx.Data.Add("ConsumedBytes", readBytes);
-                throw headerEx;
+                stream.Prepend(readBytes);
+                throw new HeaderParseException();
             }
 
             //Add header if key not already added (first come, first-only served)
@@ -394,7 +370,9 @@ namespace REstomp
             var bodyBuffer = new byte[bytesFound - parserIndex];
             Buffer.BlockCopy(headerBuffer, parserIndex, bodyBuffer, 0, bytesFound - parserIndex);
 
-            return Tuple.Create(stream, frameWithHeaders, bodyBuffer);
+            stream.Prepend(bodyBuffer);
+
+            return Tuple.Create(stream, frameWithHeaders);
         }
 
         //TODO: add overloads
@@ -405,16 +383,13 @@ namespace REstomp
         /// <typeparam name="TStream">The type of the stream.</typeparam>
         /// <param name="stream">The stream to read from.</param>
         /// <param name="stompFrame">An existing stomp frame to use as a base.</param>
-        /// <param name="remainderBytes">The remainder bytes from header parsing.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A tuple of the Stream and the resultant StompFrame.</returns>
         /// <exception cref="HeaderParseException"></exception>
-        public static async Task<Tuple<TStream, StompFrame>> ReadStompBody<TStream>(
-            TStream stream, StompFrame stompFrame, byte[] remainderBytes, CancellationToken cancellationToken)
+        public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompBody<TStream>(
+            PrependableStream<TStream> stream, StompFrame stompFrame, CancellationToken cancellationToken)
             where TStream : Stream
         {
-            var originalStreamPosition = stream.Position;
-
             //list of bytes that we read
             var bodyList = new List<byte>();
 
@@ -427,14 +402,6 @@ namespace REstomp
             if (stompFrame.Headers.TryGetValue("content-length", out contentLengthHeaderValue))
                 if (!int.TryParse(contentLengthHeaderValue, out contentLength))
                     throw new ContentLengthException(); //ERROR frame, content-length not assignable to int
-
-            //add the remainder bytes to the body
-            bodyList.AddRange(remainderBytes);
-            bodyBytesRead += remainderBytes.Length;
-
-            //if our remainder was longer than content length, throw an exception
-            if(contentLength != -1 && remainderBytes.Length > contentLength)
-                throw new ContentLengthException();
 
             //if we have content length, read that many bytes. the following byte must be 0x00
             if (contentLength != -1)
@@ -452,19 +419,11 @@ namespace REstomp
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                     }
-                    catch (OperationCanceledException opEx)
+                    catch (OperationCanceledException)
                     {
-                        try
-                        {
-                            stream.Position = originalStreamPosition;
-                        }
-                        catch (Exception)
-                        {
-                            // Nothing we can do here. Sad day.
-                        }
 
                         //add the bytes that we read for a potential failsafe
-                        opEx.Data.Add("ConsumedBytes", bodyList);
+                        stream.Prepend(bodyList);
 
                         throw;
                     }
@@ -475,7 +434,7 @@ namespace REstomp
                     {
                         bodyList.Add(bodyLengthBuffer[i]);
                     }
-                    bodyBytesRead = bytesFound + remainderBytes.Length;
+                    bodyBytesRead = bytesFound;
                     parserIndex = bytesFound;
                 }
 
@@ -488,26 +447,17 @@ namespace REstomp
                 var bodyBuffer = new byte[20];
                 
                 //if we don't have a content length, just read until we find a 0x00 null byte
-                while (bodyList.Last() != 0x00)
+                while (!bodyList.Any() || bodyList.Last() != 0x00)
                 {
                     //Check for cancellation and attempt to handle it gracefully.
                     try
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                     }
-                    catch (OperationCanceledException opEx)
+                    catch (OperationCanceledException)
                     {
-                        try
-                        {
-                            stream.Position = originalStreamPosition;
-                        }
-                        catch (Exception)
-                        {
-                            // Nothing we can do here. Sad day.
-                        }
-
                         //add the bytes that we read for a potential failsafe
-                        opEx.Data.Add("ConsumedBytes", bodyList);
+                        stream.Prepend(bodyList);
 
                         throw;
                     }
@@ -516,8 +466,10 @@ namespace REstomp
 
                     for (int i = 0; i < bytesFound; i++)
                     {
-                        if (bodyList.Last() != 0x00) bodyList.Add(bodyBuffer[i]);
-                        else break;
+                        bodyList.Add(bodyBuffer[i]);
+
+                        if(bodyBuffer[i] == 0x00)
+                            break;
                     }
                 }
             }
@@ -525,7 +477,8 @@ namespace REstomp
             //remove the trailing 0x00
             bodyList.RemoveAt(bodyList.Count - 1);
 
-            var newFrame = stompFrame.With(frame => frame.Body, bodyList.ToImmutableArray());
+            var newFrame = stompFrame
+                .With(frame => frame.Body, bodyList.ToImmutableArray());
 
             return Tuple.Create(stream, newFrame);
         }
