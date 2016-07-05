@@ -114,11 +114,11 @@ namespace REstomp.Test
         [InlineData("content-length", "126")]
         public void StompFrameWithHeaders(string headerKey, string headerValue)
         {
-            var expectation = new StompFrame(StompParser.Command.MESSAGE, 
-                new Dictionary<string, string> { {headerKey, headerValue} });
+            var expectation = new StompFrame(StompParser.Command.MESSAGE,
+                new Dictionary<string, string> { { headerKey, headerValue } });
 
             var newFrame = new StompFrame(StompParser.Command.MESSAGE)
-                .With(frame => frame.Headers, new Dictionary<string, string> { {headerKey, headerValue} }.ToImmutableDictionary());
+                .With(frame => frame.Headers, new Dictionary<string, string> { { headerKey, headerValue } }.ToImmutableDictionary());
 
             Assert.NotNull(newFrame);
             Assert.Equal(expectation.Command, newFrame.Command);
@@ -131,7 +131,7 @@ namespace REstomp.Test
         public async void StompParseHeaders()
         {
             var command = StompParser.Command.MESSAGE;
-            var headers = new Dictionary<string, string> { {"content-length", "126"} };
+            var headers = new Dictionary<string, string> { { "content-length", "126" } };
 
             var expectation = new StompFrame(command, headers);
 
@@ -290,7 +290,7 @@ namespace REstomp.Test
 
                 Assert.StrictEqual(expectation.Command, parsedCommand.Item2.Command);
                 Assert.Equal(expectation.Headers, parsedHeaders.Item2.Headers);
-                Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray()) 
+                Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray())
                     == Encoding.UTF8.GetString(parsedBody.Item2.Body.ToArray()));
                 Assert.Equal(parsedBody.Item2.Body.Length, bodyString.Length);
             }
@@ -299,48 +299,45 @@ namespace REstomp.Test
         [Fact(DisplayName = "Null Byte Signals End of Non-Content Length Frame")]
         public async void ContentEndsOnNull()
         {
-
-            for (int i = 0; i < 1001; i++)
-            {
-                var bodyString = "0123456789abcdefghijk1234567890abcd";
-                var command = StompParser.Command.MESSAGE;
-                var headers = new Dictionary<string, string>
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var headers = new Dictionary<string, string>
                     {{"key", "value"}};
-                var body = Encoding.UTF8.GetBytes(bodyString);
+            var body = Encoding.UTF8.GetBytes(bodyString);
 
-                var expectation = new StompFrame(command, headers, body);
+            var expectation = new StompFrame(command, headers, body);
 
-                using (var memStream = new MemoryStream())
-                using (var streamWriter = new StreamWriter(memStream))
+            using (var memStream = new MemoryStream())
+            using (var streamWriter = new StreamWriter(memStream))
+            {
+                var eol = "\r\n";
+                streamWriter.Write(command);
+                streamWriter.Write(eol);
+                foreach (var header in headers)
                 {
-                    var eol = "\r\n";
-                    streamWriter.Write(command);
-                    streamWriter.Write(eol);
-                    foreach (var header in headers)
-                    {
-                        streamWriter.Write($"{header.Key}:{header.Value}");
-                    }
-                    streamWriter.Write(eol);
-                    streamWriter.Write(eol);
-                    streamWriter.Write(bodyString);
-                    streamWriter.Write((char) 0x00);
-                    streamWriter.Flush();
-
-                    memStream.Position = 0;
-
-                    var parsedCommand = await StompParser.ReadStompCommand(memStream.AsPrependableStream());
-                    var parsedHeaders = await StompParser.ReadStompHeaders(parsedCommand.Item1, parsedCommand.Item2);
-                    var parsedBody =
-                        await
-                            StompParser.ReadStompBody(parsedHeaders.Item1, parsedHeaders.Item2, CancellationToken.None);
-
-                    Assert.StrictEqual(expectation.Command, parsedCommand.Item2.Command);
-                    Assert.Equal(expectation.Headers, parsedHeaders.Item2.Headers);
-                    Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray())
-                                == Encoding.UTF8.GetString(parsedBody.Item2.Body.ToArray()));
-                    Assert.Equal(parsedBody.Item2.Body.Length, bodyString.Length);
+                    streamWriter.Write($"{header.Key}:{header.Value}");
                 }
+                streamWriter.Write(eol);
+                streamWriter.Write(eol);
+                streamWriter.Write(bodyString);
+                streamWriter.Write((char)0x00);
+                streamWriter.Flush();
+
+                memStream.Position = 0;
+
+                var parsedCommand = await StompParser.ReadStompCommand(memStream.AsPrependableStream());
+                var parsedHeaders = await StompParser.ReadStompHeaders(parsedCommand.Item1, parsedCommand.Item2);
+                var parsedBody =
+                    await
+                        StompParser.ReadStompBody(parsedHeaders.Item1, parsedHeaders.Item2, CancellationToken.None);
+
+                Assert.StrictEqual(expectation.Command, parsedCommand.Item2.Command);
+                Assert.Equal(expectation.Headers, parsedHeaders.Item2.Headers);
+                Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray())
+                            == Encoding.UTF8.GetString(parsedBody.Item2.Body.ToArray()));
+                Assert.Equal(parsedBody.Item2.Body.Length, bodyString.Length);
             }
         }
+
     }
 }
