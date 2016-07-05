@@ -9,18 +9,23 @@ using System.Threading;
 
 namespace REstomp
 {
+
+
     public class StompService
         : IDisposable
     {
+        protected IStompParser Parser { get; set; }
+
         private TcpListener Listener { get; }
 
         private IList<TcpClient> Connections { get; } = new List<TcpClient>();
         private IList<TcpClient> NegotiatedConnections { get; } = new List<TcpClient>();
 
-        public StompService(IPAddress ipAddress, int port)
+        public StompService(IPEndPoint endPoint, IStompParser parser)
         {
-            var endpoint = new IPEndPoint(ipAddress, port);
-            Listener = new TcpListener(endpoint);
+            Parser = parser;
+            
+            Listener = new TcpListener(endPoint);
         }
 
         public void Start()
@@ -39,15 +44,8 @@ namespace REstomp
                     Connections.Add(tcpClientTask.Result);
 
                     var netStream = tcpClientTask.Result.GetStream();
-                    //Begin negotiate
 
-                    var streamAndFrame = await StompParser.ReadStompCommand(netStream.AsPrependableStream());
-
-                    var headerParseResult =
-                        await StompParser.ReadStompHeaders(streamAndFrame.Item1, streamAndFrame.Item2);
-
-                    var bodyParseReault =
-                        await StompParser.ReadStompBody(headerParseResult.Item1, headerParseResult.Item2, CancellationToken.None);
+                    var frame = await Parser.ReadStompFrame(netStream);
                 }
 
                 //Not accepted. Protocol error. 

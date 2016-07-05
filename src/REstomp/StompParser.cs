@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace REstomp
 {
-    public static class StompParser
+    public class StompParser : IStompParser
     {
         public static class Command
         {
@@ -483,5 +483,49 @@ namespace REstomp
             return Tuple.Create(stream, newFrame);
         }
 
+
+        public async Task<Tuple<TStream, StompFrame>> ReadStompFrame<TStream>(TStream stream, CancellationToken cancellationToken) 
+            where TStream : Stream
+        {
+            var result = await stream.AsPrependableStream()
+                .ReadStompCommand(cancellationToken)
+                .ThenReadStompHeaders()
+                .ThenReadStompBody();
+
+            return Tuple.Create(result.Item1.Unwrap(), result.Item2);
+        }
+
+        public async Task<Tuple<TStream, StompFrame>> ReadStompFrame<TStream>(TStream stream) where TStream : Stream
+        {
+            return await ReadStompFrame(stream, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+
+        public async Task<StompFrame> ReadStompFrame(string value, CancellationToken cancellationToken)
+        {
+            using (var memStream = new MemoryStream(Encoding.UTF8.GetBytes(value)))
+            {
+                return (await ReadStompFrame(memStream, cancellationToken)).Item2;
+            }
+        }
+
+        public async Task<StompFrame> ReadStompFrame(string value)
+        {
+            return await ReadStompFrame(value, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+    }
+
+    public interface IStompParser
+    {
+        Task<Tuple<TStream, StompFrame>> ReadStompFrame<TStream>(TStream stream, CancellationToken cancellationToken)
+            where TStream : Stream;
+
+        Task<Tuple<TStream, StompFrame>> ReadStompFrame<TStream>(TStream stream)
+            where TStream : Stream;
+
+        Task<StompFrame> ReadStompFrame(string value, CancellationToken cancellationToken);
+
+        Task<StompFrame> ReadStompFrame(string value);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 
 namespace REstomp.Runner
 {
@@ -6,7 +7,10 @@ namespace REstomp.Runner
     {
         public static void Main(string[] args)
         {
-            using(var reStompService = new StompService(System.Net.IPAddress.Parse("127.0.0.1"), 5467))
+            var endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 5467);
+            var parser = new StompParser();
+
+            using(var reStompService = new StompService(endPoint, parser))
             {
                 reStompService.Start();
 
