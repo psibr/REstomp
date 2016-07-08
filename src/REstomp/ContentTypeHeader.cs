@@ -27,7 +27,7 @@ namespace REstomp
             if(contentTypeHeader == null)
                 throw new ArgumentNullException(nameof(contentTypeHeader));
 
-            return Encoding.GetEncoding(contentTypeHeader.Charset ?? "utf-8");
+            return Encoding.GetEncoding(string.IsNullOrWhiteSpace(contentTypeHeader.Charset) ? "utf-8" : contentTypeHeader.Charset);
         }
     }
 }

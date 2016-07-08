@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace REstomp
 {
@@ -97,9 +98,8 @@ namespace REstomp
             Expression<Func<StompFrame, ImmutableArray<KeyValuePair<string, string>>>> mutationSelectorExpression,
             KeyValuePair<string, string>[] value)
         {
-            return this.With(mutationSelectorExpression, value.ToImmutableArray());
+            return With(mutationSelectorExpression, value.ToImmutableArray());
         }
-
     }
 
 }
