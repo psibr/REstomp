@@ -106,7 +106,7 @@ namespace REstomp.Test
             Assert.NotNull(newFrame);
             Assert.Equal(expectation.Command, newFrame.Command);
 
-            Assert.Empty(newFrame.Headers);
+            Assert.True(newFrame.Headers.IsDefault);
             Assert.True(newFrame.Body.IsDefault);
         }
 
@@ -114,16 +114,19 @@ namespace REstomp.Test
         [InlineData("content-length", "126")]
         public void StompFrameWithHeaders(string headerKey, string headerValue)
         {
-            var expectation = new StompFrame(StompParser.Command.MESSAGE, 
-                new Dictionary<string, string> { {headerKey, headerValue} });
+            var header = new KeyValuePair<string, string>(headerKey, headerValue);
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var expectation = new StompFrame(StompParser.Command.MESSAGE, headerArray);
 
             var newFrame = new StompFrame(StompParser.Command.MESSAGE)
-                .With(frame => frame.Headers, new Dictionary<string, string> { {headerKey, headerValue} }.ToImmutableDictionary());
+                .With(frame => frame.Headers, headerArray);
 
             Assert.NotNull(newFrame);
             Assert.Equal(expectation.Command, newFrame.Command);
 
-            Assert.Equal(expectation.Headers, newFrame.Headers);
+            Assert.Equal(expectation.Headers[0].Key, newFrame.Headers[0].Key);
+            Assert.Equal(expectation.Headers[0].Value, newFrame.Headers[0].Value);
             Assert.True(newFrame.Body.IsDefault);
         }
 
@@ -131,9 +134,11 @@ namespace REstomp.Test
         public async void StompParseHeaders()
         {
             var command = StompParser.Command.MESSAGE;
-            var headers = new Dictionary<string, string> { {"content-length", "126"} };
+            var header = new KeyValuePair<string, string>("content-length", "126");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
 
-            var expectation = new StompFrame(command, headers);
+            var expectation = new StompFrame(command, headerArray);
 
             using (var memStream = new MemoryStream())
             using (var streamWriter = new StreamWriter(memStream))
@@ -141,9 +146,9 @@ namespace REstomp.Test
                 var eol = "\r\n";
                 streamWriter.Write(command);
                 streamWriter.Write(eol);
-                foreach (var header in headers)
+                foreach (var headerPair in headerArray)
                 {
-                    streamWriter.Write($"{header.Key}:{header.Value}");
+                    streamWriter.Write($"{headerPair.Key}:{headerPair.Value}");
                 }
                 streamWriter.Write(eol);
                 streamWriter.Write(eol);
@@ -156,7 +161,7 @@ namespace REstomp.Test
                 var parsedHeaders = await StompParser.ReadStompHeaders(parsedCommand.Item1, parsedCommand.Item2);
 
                 Assert.StrictEqual(expectation.Command, parsedCommand.Item2.Command);
-                Assert.Equal(expectation.Headers, parsedHeaders.Item2.Headers);
+                Assert.Equal(expectation.Headers[0], parsedHeaders.Item2.Headers[0]);
             }
         }
 
@@ -259,11 +264,14 @@ namespace REstomp.Test
         {
             var bodyString = "0123456789abcdefghijk1234567890abcd";
             var command = StompParser.Command.MESSAGE;
-            var headers = new Dictionary<string, string>
-                { { "content-length", bodyString.Length.ToString() } };
+
+            var header = new KeyValuePair<string, string>
+                ("content-length", bodyString.Length.ToString());
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
             var body = Encoding.UTF8.GetBytes(bodyString);
 
-            var expectation = new StompFrame(command, headers, body);
+            var expectation = new StompFrame(command, headerArray, body);
 
             using (var memStream = new MemoryStream())
             using (var streamWriter = new StreamWriter(memStream))
@@ -271,9 +279,9 @@ namespace REstomp.Test
                 var eol = "\r\n";
                 streamWriter.Write(command);
                 streamWriter.Write(eol);
-                foreach (var header in headers)
+                foreach (var headerPair in headerArray)
                 {
-                    streamWriter.Write($"{header.Key}:{header.Value}");
+                    streamWriter.Write($"{headerPair.Key}:{headerPair.Value}");
                 }
                 streamWriter.Write(eol);
                 streamWriter.Write(eol);
@@ -289,7 +297,7 @@ namespace REstomp.Test
                     .ReadStompBody(parsedHeaders.Item1, parsedHeaders.Item2, parsedHeaders.Item3, CancellationToken.None);
 
                 Assert.StrictEqual(expectation.Command, parsedCommand.Item2.Command);
-                Assert.Equal(expectation.Headers, parsedHeaders.Item2.Headers);
+                Assert.Equal(expectation.Headers[0], parsedHeaders.Item2.Headers[0]);
                 Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray()) 
                     == Encoding.UTF8.GetString(parsedBody.Item2.Body.ToArray()));
                 Assert.Equal(parsedBody.Item2.Body.Length, bodyString.Length);
@@ -301,11 +309,14 @@ namespace REstomp.Test
         {
             var bodyString = "0123456789abcdefghijk1234567890abcd";
             var command = StompParser.Command.MESSAGE;
-            var headers = new Dictionary<string, string>
-                { { "key", "value" } };
+
+            var header = new KeyValuePair<string, string>("key", "value");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+
             var body = Encoding.UTF8.GetBytes(bodyString);
 
-            var expectation = new StompFrame(command, headers, body);
+            var expectation = new StompFrame(command, headerArray, body);
 
             using (var memStream = new MemoryStream())
             using (var streamWriter = new StreamWriter(memStream))
@@ -313,7 +324,7 @@ namespace REstomp.Test
                 var eol = "\r\n";
                 streamWriter.Write(command);
                 streamWriter.Write(eol);
-                foreach (var header in headers)
+                foreach (var headerPair in headerArray)
                 {
                     streamWriter.Write($"{header.Key}:{header.Value}");
                 }
@@ -331,7 +342,7 @@ namespace REstomp.Test
                     .ReadStompBody(parsedHeaders.Item1, parsedHeaders.Item2, parsedHeaders.Item3, CancellationToken.None);
 
                 Assert.StrictEqual(expectation.Command, parsedCommand.Item2.Command);
-                Assert.Equal(expectation.Headers, parsedHeaders.Item2.Headers);
+                Assert.Equal(expectation.Headers[0], parsedHeaders.Item2.Headers[0]);
                 Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray())
                     == Encoding.UTF8.GetString(parsedBody.Item2.Body.ToArray()));
                 Assert.Equal(parsedBody.Item2.Body.Length, bodyString.Length);

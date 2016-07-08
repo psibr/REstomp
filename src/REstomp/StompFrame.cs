@@ -7,29 +7,50 @@ namespace REstomp
 {
     public class StompFrame
     {
-        public StompFrame(string command, IDictionary<string, string> headers, byte[] body)
+        public StompFrame(string command, KeyValuePair<string, string>[] headers, byte[] body)
         {
             Command = command;
-            Headers = headers?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
+            Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;
 
             if(body != null)
                 Body = body.ToImmutableArray();
         }
 
-        public StompFrame(string command, IDictionary<string, string> headers, ImmutableArray<byte> body)
+        public StompFrame(string command, ImmutableArray<KeyValuePair<string, string>> headers, byte[] body)
         {
             Command = command;
-            Headers = headers?.ToImmutableDictionary() ?? ImmutableDictionary<string, string>.Empty;
+            Headers = headers;
+
+            if (body != null)
+                Body = body.ToImmutableArray();
+        }
+
+        public StompFrame(string command, KeyValuePair<string, string>[] headers, ImmutableArray<byte> body)
+        {
+            Command = command;
+            Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;
             Body = body;
         }
 
-        public StompFrame(string command, IDictionary<string, string> headers)
+        public StompFrame(string command, ImmutableArray<KeyValuePair<string, string>> headers, ImmutableArray<byte> body)
+        {
+            Command = command;
+            Headers = headers;
+            Body = body;
+        }
+
+        public StompFrame(string command, KeyValuePair<string, string>[] headers)
+            : this(command, headers, null)
+        {
+        }
+
+        public StompFrame(string command, ImmutableArray<KeyValuePair<string, string>> headers)
             : this(command, headers, null)
         {
         }
 
         public StompFrame(string command)
-            : this(command, ImmutableDictionary<string, string>.Empty, null)
+            : this(command, ImmutableArray<KeyValuePair<string, string>>.Empty, null)
         {
         }
 
@@ -39,7 +60,7 @@ namespace REstomp
 
         public string Command { get; }
 
-        public ImmutableDictionary<string, string> Headers { get; }
+        public ImmutableArray<KeyValuePair<string, string>> Headers { get; }
 
         public ImmutableArray<byte> Body { get; }
 
@@ -61,7 +82,7 @@ namespace REstomp
                     command = (string)obj;
                     break;
                 case nameof(Headers):
-                    headers = (ImmutableDictionary<string, string>)obj;
+                    headers = (ImmutableArray<KeyValuePair <string, string>>)obj;
                     break;
                 case nameof(Body):
                     body = (ImmutableArray<byte>)obj;
@@ -69,6 +90,13 @@ namespace REstomp
             }
 
             return new StompFrame(command, headers, body);
+        }
+
+        public StompFrame With(
+            Expression<Func<StompFrame, ImmutableArray<KeyValuePair<string, string>>>> mutationSelectorExpression,
+            KeyValuePair<string, string>[] value)
+        {
+            return this.With(mutationSelectorExpression, value.ToImmutableArray());
         }
 
     }
