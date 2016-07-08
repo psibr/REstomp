@@ -325,7 +325,7 @@ namespace REstomp.Test
                 streamWriter.Write(eol);
                 foreach (var headerPair in headerArray)
                 {
-                    streamWriter.Write($"{header.Key}:{header.Value}");
+                    streamWriter.Write($"{headerPair.Key}:{headerPair.Value}");
                 }
                 streamWriter.Write(eol);
                 streamWriter.Write(eol);
