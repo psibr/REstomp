@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace REstomp
 {
@@ -12,7 +14,7 @@ namespace REstomp
             Command = command;
             Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;
 
-            if(body != null)
+            if (body != null)
                 Body = body.ToImmutableArray();
         }
 
@@ -82,7 +84,7 @@ namespace REstomp
                     command = (string)obj;
                     break;
                 case nameof(Headers):
-                    headers = (ImmutableArray<KeyValuePair <string, string>>)obj;
+                    headers = (ImmutableArray<KeyValuePair<string, string>>)obj;
                     break;
                 case nameof(Body):
                     body = (ImmutableArray<byte>)obj;
@@ -96,8 +98,8 @@ namespace REstomp
             Expression<Func<StompFrame, ImmutableArray<KeyValuePair<string, string>>>> mutationSelectorExpression,
             KeyValuePair<string, string>[] value)
         {
-            return this.With(mutationSelectorExpression, value.ToImmutableArray());
+            return With(mutationSelectorExpression, value.ToImmutableArray());
         }
-
     }
+
 }

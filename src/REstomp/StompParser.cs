@@ -359,7 +359,7 @@ namespace REstomp
             //Add headers to the list
             foreach (var segments in headerSegments)
             {
-                var key = segments[0];
+                var key = segments[0].ToLowerInvariant();
                 var value = segments[1];
                 var newPair = new KeyValuePair<string, string>(key, value);
                 headers.Add(newPair);
@@ -400,10 +400,9 @@ namespace REstomp
             var bodyBytesRead = 0;
 
             //Attempt to find and use the content-length header.
-            string contentLengthHeaderValue;
-            if (stompFrame.Headers.TryGetValue("content-length", out contentLengthHeaderValue))
-                if (!int.TryParse(contentLengthHeaderValue, out contentLength))
-                    throw new ContentLengthException(); //ERROR frame, content-length not assignable to int
+            contentLength = stompFrame
+                .GetContentLengthHeader()
+                .ContentLength;
 
             //if we have content length, read that many bytes. the following byte must be 0x00
             if (contentLength != -1)

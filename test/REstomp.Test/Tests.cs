@@ -45,6 +45,16 @@ namespace REstomp.Test
                 ((string) objects[0]).ToLower(), objects[1]
             });
 
+        public static IEnumerable<object[]> EncodingCharsetEnumerable =>
+            new List<object[]>
+            {
+                new object[] { "utf-8", Encoding.UTF8 },
+                new object[] { "utf-7", Encoding.UTF7 },
+                new object[] { "utf-16", Encoding.Unicode },
+                new object[] { "utf-32", Encoding.UTF32 },
+                new object[] { "ascii", Encoding.ASCII }
+            };
+
         [Theory(DisplayName = "Command Parses"),
             MemberData(nameof(CommandData))]
         [Trait("Category", "Parser")]
@@ -382,12 +392,134 @@ namespace REstomp.Test
                 var frame = await parser.ReadStompFrame(memStream).UnWrapFrame();
 
                 Assert.StrictEqual(expectation.Command, frame.Command);
-                Assert.Equal(expectation.Headers, frame.Headers);
+                Assert.Equal(expectation.Headers[0], frame.Headers[0]);
                 Assert.True(Encoding.UTF8.GetString(expectation.Body.ToArray())
                     == Encoding.UTF8.GetString(frame.Body.ToArray()));
                 Assert.Equal(frame.Body.Length, bodyString.Length);
 
             }
         }
+
+        [Fact(DisplayName = "GetContentLengthHeader returns empty if no content length header")]
+        public void EmptyIfNoLengthHeader()
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("key", "value");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            Assert.Equal(ContentLengthHeader.Empty, frame.GetContentLengthHeader());
+        }
+
+        [Fact(DisplayName = "GetContentLengthHeader handles valid int strings")]
+        public void HandleValidIntStrings()
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("content-length", bodyString.Length.ToString());
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            Assert.Equal(bodyString.Length, frame.GetContentLengthHeader().ContentLength);
+        }
+
+        [Fact(DisplayName = "GetContentLengthHeader throws if invalid int string")]
+        public void ThrowExceptionIfInvalid()
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("content-length", "thirty-five");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            Assert.Throws<ContentLengthException>(() =>
+            {
+                frame.GetContentLengthHeader();
+            });
+        }
+
+        [Fact(DisplayName = "GetContentTypeHeader returns empty if no header")]
+        public void EmptyIfNoTypeHeader()
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("key", "value");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            Assert.Equal(ContentTypeHeader.Empty, frame.GetContentTypeHeader());
+        }
+
+        [Fact(DisplayName = "GetContentTypeHeader captures content-type and charset")]
+        public void ValidTypeHeader()
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("content-type", "application/json;charset=utf-32");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            var resultHeader = frame.GetContentTypeHeader();
+
+            Assert.Equal("application/json", resultHeader.ContentType);
+            Assert.Equal("utf-32", resultHeader.Charset);
+        }
+
+        [Theory(DisplayName = "ContentTypeHeader.GetEncoding returns correct encodings")]
+        [MemberData(nameof(EncodingCharsetEnumerable))]
+        
+        public void SupportEncoding(string charset, Encoding encoding)
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("content-type", $"application/json;charset={charset}");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            Assert.Equal(encoding, frame.GetContentTypeHeader().GetEncoding());
+        }
+
+        [Theory(DisplayName = "ContentTypeHeader.GetEncoding returns utf-8 if no charset provided")]
+        [InlineData("application/json")]
+        [InlineData("application/json;charset=")]
+        [InlineData("application/json;")]
+        [InlineData("application/json;;")]
+
+        public void NoCharsetProvided(string contentTypeValue)
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("content-type", contentTypeValue);
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            var resultHeader = frame.GetContentTypeHeader();
+
+            Assert.Equal("application/json", resultHeader.ContentType);
+            Assert.Equal(Encoding.UTF8, frame.GetContentTypeHeader().GetEncoding());
+        }
+
     }
 }
