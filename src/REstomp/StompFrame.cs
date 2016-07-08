@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace REstomp
@@ -12,7 +13,7 @@ namespace REstomp
             Command = command;
             Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;
 
-            if(body != null)
+            if (body != null)
                 Body = body.ToImmutableArray();
         }
 
@@ -82,7 +83,7 @@ namespace REstomp
                     command = (string)obj;
                     break;
                 case nameof(Headers):
-                    headers = (ImmutableArray<KeyValuePair <string, string>>)obj;
+                    headers = (ImmutableArray<KeyValuePair<string, string>>)obj;
                     break;
                 case nameof(Body):
                     body = (ImmutableArray<byte>)obj;
@@ -100,4 +101,5 @@ namespace REstomp
         }
 
     }
+
 }

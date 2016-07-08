@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Threading.Tasks;
+
 
 namespace REstomp
 {
@@ -16,7 +14,7 @@ namespace REstomp
 
             foreach (var keyValuePair in headerPairs)
             {
-                if(!keys.Contains(keyValuePair.Key))
+                if (!keys.Contains(keyValuePair.Key))
                     keys.Add(keyValuePair.Key);
             }
 
