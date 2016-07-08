@@ -249,7 +249,7 @@ namespace REstomp
             where TStream : Stream
         {
             //put our headers with values into a dictionary after parsing them
-            var headers = new Dictionary<string, string>();
+            var headers = new List<KeyValuePair<string,string>>();
 
             var headerBuffer = new byte[20];
             var bytesFound = 0;
@@ -356,15 +356,17 @@ namespace REstomp
                 throw new HeaderParseException();
             }
 
-            //Add header if key not already added (first come, first-only served)
-            foreach (var segments in headerSegments
-                .Where(segments => !headers.ContainsKey(segments[0])))
+            //Add headers to the list
+            foreach (var segments in headerSegments)
             {
-                headers.Add(segments[0], segments[1]);
+                var key = segments[0];
+                var value = segments[1];
+                var newPair = new KeyValuePair<string, string>(key, value);
+                headers.Add(newPair);
             }
 
             //create a Stomp Frame with headers
-            var frameWithHeaders = stompFrame.With(frame => frame.Headers, headers.ToImmutableDictionary());
+            var frameWithHeaders = stompFrame.With(frame => frame.Headers, headers.ToImmutableArray());
 
             //find the remaining bytes and put them at the front of an array so we don't lose part of the body
             var bodyBuffer = new byte[bytesFound - parserIndex];
