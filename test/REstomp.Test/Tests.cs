@@ -521,5 +521,28 @@ namespace REstomp.Test
             Assert.Equal(Encoding.UTF8, frame.GetContentTypeHeader().GetEncoding());
         }
 
+        [Theory(DisplayName = "StompFrame.ToString returns appropriate string")]
+        [MemberData(nameof(EncodingCharsetEnumerable))]
+        public void FrameToString(string charset, Encoding encoding)
+        {
+            var bodyString = "0123456789abcdefghijk1234567890abcd";
+            var command = StompParser.Command.MESSAGE;
+            var header = new KeyValuePair<string, string>("content-type", $"application/json;charset={charset}");
+            var headerArray = new KeyValuePair<string, string>[1];
+            headerArray[0] = header;
+            var body = Encoding.UTF8.GetBytes(bodyString);
+
+            var frame = new StompFrame(command, headerArray, body);
+
+            var expectation =
+                "MESSAGE\n" +
+                $"content-type:application/json;charset={charset}\n" +
+                "\n" +
+                encoding.GetString(body) +
+                "\0";
+
+            Assert.Equal(expectation, frame.ToString());
+        }
+
     }
 }
