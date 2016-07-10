@@ -100,6 +100,31 @@ namespace REstomp
         {
             return With(mutationSelectorExpression, value.ToImmutableArray());
         }
+
+        /// <summary>Returns a string that represents the current object.</summary>
+        /// <returns>A string that represents the current object.</returns>
+        public override string ToString()
+        {
+            var encoding = this.GetContentTypeHeader().GetEncoding();
+
+            var builder = new StringBuilder();
+
+            //Command
+            builder.Append(Command);
+            builder.Append("\n");
+
+            //Headers
+            foreach (var keyValuePair in Headers)
+            {
+                builder.Append($"{keyValuePair.Key}:{keyValuePair.Value}\n");
+            }
+            //Body
+            builder.Append("\n");
+            builder.Append(encoding.GetString(Body.ToArray()));
+            builder.Append((char)0x00);
+
+            return builder.ToString();
+        }
     }
 
 }
