@@ -57,6 +57,9 @@ namespace REstomp
 
             public static bool CanHaveBody(string command) =>
                 new[] { SEND, MESSAGE, ERROR }.Contains(command);
+
+            public static bool IsConnectRequest(string command) =>
+                new [] { CONNECT, STOMP }.Contains(command);
         }
 
         /// <summary>
@@ -515,6 +518,34 @@ namespace REstomp
             return await ReadStompFrame(value, CancellationToken.None)
                 .ConfigureAwait(false);
         }
+
+        protected byte[] GetBytes(StompFrame frame)
+        {
+            var byteList = new List<byte>();
+            byteList.AddRange(Encoding.UTF8.GetBytes($"{frame.Command}\n"));
+
+            foreach (var header in frame.Headers)
+            {
+                byteList.AddRange(Encoding.UTF8.GetBytes($"{header.Key}:{header.Value}\n"));    
+            }
+
+            byteList.AddRange(Encoding.UTF8.GetBytes("\n"));
+
+            byteList.AddRange(frame.Body.Union(new [] { (byte)0x00 }));
+
+            return byteList.ToArray();
+        }
+
+        public TStream WriteStompFrame<TStream>(TStream stream, StompFrame stompFrame)
+            where TStream : Stream
+        {
+            var frameBytes = GetBytes(stompFrame);
+            stream.Write(frameBytes, 0, frameBytes.Length);
+
+            stream.Flush();
+
+            return stream;
+        }
     }
 
     public interface IStompParser
@@ -528,5 +559,8 @@ namespace REstomp
         Task<StompFrame> ReadStompFrame(string value, CancellationToken cancellationToken);
 
         Task<StompFrame> ReadStompFrame(string value);
+
+        TStream WriteStompFrame<TStream>(TStream stream, StompFrame stompFrame)
+            where TStream : Stream;
     }
 }

@@ -9,7 +9,7 @@ namespace REstomp
 {
     public class StompFrame
     {
-        public StompFrame(string command, KeyValuePair<string, string>[] headers, byte[] body)
+        public StompFrame(string command, IDictionary<string, string> headers, byte[] body)
         {
             Command = command;
             Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;
@@ -27,7 +27,7 @@ namespace REstomp
                 Body = body.ToImmutableArray();
         }
 
-        public StompFrame(string command, KeyValuePair<string, string>[] headers, ImmutableArray<byte> body)
+        public StompFrame(string command, IDictionary<string, string> headers, ImmutableArray<byte> body)
         {
             Command = command;
             Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;
@@ -41,7 +41,7 @@ namespace REstomp
             Body = body;
         }
 
-        public StompFrame(string command, KeyValuePair<string, string>[] headers)
+        public StompFrame(string command, IDictionary<string, string> headers)
             : this(command, headers, null)
         {
         }

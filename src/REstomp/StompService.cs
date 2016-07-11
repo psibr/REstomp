@@ -1,15 +1,17 @@
 ﻿using System;
+using System.Net;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
 
 namespace REstomp
 {
 
+    using MidFunc = Func<Func<IDictionary<string, object>, Task>, Func<IDictionary<string, object>, Task>>;
+    using StompCommand = StompParser.Command;
 
     public class StompService
         : IDisposable
@@ -18,43 +20,75 @@ namespace REstomp
 
         private TcpListener Listener { get; }
 
-        private IList<TcpClient> Connections { get; } = new List<TcpClient>();
-        private IList<TcpClient> NegotiatedConnections { get; } = new List<TcpClient>();
+        private CancellationTokenSource CancellationSource { get; } = new CancellationTokenSource();
 
         public StompService(IPEndPoint endPoint, IStompParser parser)
         {
             Parser = parser;
-            
+
             Listener = new TcpListener(endPoint);
         }
 
         public void Start()
         {
-            StompFrame.Empty
-                .With(frame => frame.Command, StompParser.Command.CONNECTED);
+            Listener.Start();
 
-            Listener.Start(100);
-
-            var acceptTask = Listener.AcceptTcpClientAsync();
-
-            acceptTask.ContinueWith(async (tcpClientTask) =>
+            while (!CancellationSource.IsCancellationRequested)
             {
-                if (tcpClientTask.IsCompleted && tcpClientTask.Result != null)
+                if (Listener.Pending())
                 {
-                    Connections.Add(tcpClientTask.Result);
+                    Listener.AcceptTcpClientAsync()
+                        .ContinueWith(async (tcpClientTask) =>
+                        {
+                            if (tcpClientTask.IsCompleted && tcpClientTask.Result != null)
+                            {
+                                var tcpClient = tcpClientTask.Result;
+                                var netStream = tcpClient.GetStream();
 
-                    var netStream = tcpClientTask.Result.GetStream();
+                                var middlewareStack = new Stack<MidFunc>();
 
-                    var frame = await Parser.ReadStompFrame(netStream);
+                                middlewareStack.Push(new Middleware.SessionMiddleware().Invoke);
+
+                                var application = new StompPipeline(middlewareStack);
+
+                                while (!CancellationSource.IsCancellationRequested && tcpClient.Connected)
+                                {
+                                    var frame = await Parser.ReadStompFrame(netStream, CancellationSource.Token).UnWrapFrame();
+
+                                    var environment = new Dictionary<string, object>();
+
+                                    environment.Add("stomp.requestMethod", frame.Command);
+                                    environment.Add("stomp.requestHeaders", frame.Headers);
+                                    environment.Add("stomp.requestBody", frame.Body);
+
+                                    environment.Add("stomp.responseMethod", null);
+                                    environment.Add("stomp.responseHeaders", new Dictionary<string, string>().ToImmutableArray());
+                                    environment.Add("stomp.responseBody", new byte[0].ToImmutableArray());
+
+                                    var responseFrame = await application.Process(environment);
+
+                                    if (responseFrame != null)
+                                    {
+                                        Parser.WriteStompFrame(netStream, responseFrame);
+
+                                        var terminatingCommands = new[] { StompCommand.DISCONNECT, StompCommand.ERROR };
+                                        if (terminatingCommands.Contains(responseFrame.Command))
+                                            break;
+                                    }
+                                }
+                            }
+                        });
                 }
-
-                //Not accepted. Protocol error. 
-
-            });
+                else
+                {
+                    Thread.Sleep(20);
+                }
+            }
         }
 
         public void Stop()
         {
+            CancellationSource.Cancel();
         }
 
         public void Dispose(bool isDisposing)

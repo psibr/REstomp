@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace REstomp
@@ -41,6 +42,24 @@ namespace REstomp
                 return ContentLengthHeader.Empty;
 
             return new ContentLengthHeader(contentLengthHeaderValue);
+        }
+
+        public static IDictionary<string, object> WriteToEnvironmentRequest(this StompFrame frame, IDictionary<string, object> environment)
+        {
+            environment["stomp.requestMethod"] = frame.Command;
+            environment["stomp.requestHeaders"] = frame.Headers;
+            environment["stomp.requestBody"] = frame.Body;
+
+            return environment;
+        }
+
+        public static IDictionary<string, object> WriteToEnvironmentResponse(this StompFrame frame, IDictionary<string, object> environment)
+        {
+            environment["stomp.responseMethod"] = frame.Command;
+            environment["stomp.responseHeaders"] = frame.Headers;
+            environment["stomp.responseBody"] = frame.Body;
+
+            return environment;
         }
     }
 }
