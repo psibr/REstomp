@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text;
 
 namespace REstomp
@@ -60,6 +61,35 @@ namespace REstomp
             environment["stomp.responseBody"] = frame.Body;
 
             return environment;
+        }
+
+        public static StompFrame ReadFromEnvironmentRequest(this IDictionary<string, object> environment)
+        {
+            var method = environment["stomp.requestMethod"] as string;
+            var headers = (ImmutableArray<KeyValuePair<string, string>>)environment["stomp.requestHeaders"];
+            var body = (ImmutableArray<byte>)environment["stomp.requestBody"];
+
+            if(string.IsNullOrWhiteSpace(method))
+                return StompFrame.Empty;
+
+            return new StompFrame(method, headers, body);
+        }
+
+        public static StompFrame ReadFromEnvironmentResponse(this IDictionary<string, object> environment)
+        {
+            StompFrame responseFrame = null;
+
+            var command = environment["stomp.reponseMethod"] as string;
+
+            if (!string.IsNullOrWhiteSpace(command) && StompParser.Command.IsSupported(command))
+            {
+                var headers = (ImmutableArray<KeyValuePair<string, string>>)environment["stomp.responseHeaders"];
+                var body = (ImmutableArray<byte>)environment["stomp.responseBody"];
+
+                responseFrame = new StompFrame(command, headers, body);
+            }
+
+            return responseFrame;
         }
     }
 }

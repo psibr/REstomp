@@ -2,17 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace REstomp.Middleware
 {
     using StompCommand = StompParser.Command;
-    using AppFunc = Func<IDictionary<string, object>, Task>;
+    using AppFunc = Func<IDictionary<string, object>, Task>;    
 
     public class SessionMiddleware
     {
-        public SessionMiddleware()
-        {
+        private SessionOptions Options;
 
+        public SessionMiddleware(SessionOptions options = null)
+        {
+            Options = options ?? new SessionOptions();
         }
 
         public AppFunc Invoke(AppFunc next) =>
@@ -22,10 +25,27 @@ namespace REstomp.Middleware
 
                 if(StompCommand.IsConnectRequest(stompCommand))
                 {
-                    //Generate CONNECTED frame.
-                    var frame = new StompFrame(StompCommand.CONNECTED, new Dictionary<string, string>{
-                        { "version", "1.2" }
-                    }).WriteToEnvironmentResponse(environment);
+                    string version;
+                    object versionObject;
+                    if(environment.TryGetValue("stomp.protocolVersion", out versionObject))
+                        version = "1.0";
+                    else
+                        version = versionObject as string;
+
+                    if(Options.AcceptedVersions.Contains(version))
+                    {
+                        new StompFrame(StompCommand.CONNECTED, new Dictionary<string, string>
+                        {
+                            { "version", version }
+                        }).WriteToEnvironmentResponse(environment);
+                    }
+                    else
+                    {
+                        new StompFrame(StompCommand.ERROR, new Dictionary<string, string>
+                        {
+                            { "message", "No acceptable protocol version negotiated." }
+                        }).WriteToEnvironmentResponse(environment);
+                    }
                 }
                 else
                 {
@@ -35,17 +55,38 @@ namespace REstomp.Middleware
 
                     if(headers.TryGetValue("session", out sessionId) && !string.IsNullOrWhiteSpace(sessionId))
                     {
-                        //Let pass.
-                        await next(environment);
+                        if(Options.ValidateSession(sessionId))
+                            await next(environment);
+                        else
+                            new StompFrame(StompCommand.ERROR, new Dictionary<string, string>
+                            {
+                                { "message", "Invalid or expired/rejected session identifier." }
+                            }).WriteToEnvironmentResponse(environment);
                     }
                     else
                     {
-                        //Generate ERROR frame.
-                        var frame = new StompFrame(StompCommand.ERROR, new Dictionary<string, string>{
+                        new StompFrame(StompCommand.ERROR, new Dictionary<string, string>{
                             { "message", "Session not established." }
                         }).WriteToEnvironmentResponse(environment); 
                     }
                 }
             };
+    }
+
+    public class SessionOptions
+    {
+        /// <summary>
+        /// Versions of STOMP this application will accept. Defaults to 1.2 only.
+        /// </summary>
+        /// <returns>Accepted STOMP versions</returns>
+        public string[] AcceptedVersions { get; set; } = new [] { "1.2" };
+
+        public Action<string> AddSession { get; set; } = (sessionId) =>
+            SessionIdentifiers.Add(sessionId);
+
+        public Func<string, bool> ValidateSession { get; set; } = (sessionId) =>
+            SessionIdentifiers.Contains(sessionId);
+
+        private static IList<string> SessionIdentifiers = new List<string>(); 
     }
 }

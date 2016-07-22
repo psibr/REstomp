@@ -29,7 +29,7 @@ namespace REstomp
             Listener = new TcpListener(endPoint);
         }
 
-        public void Start()
+        public void Start(Action<Stack<MidFunc>> middlewareStackAction)
         {
             Listener.Start();
 
@@ -47,7 +47,7 @@ namespace REstomp
 
                                 var middlewareStack = new Stack<MidFunc>();
 
-                                middlewareStack.Push(new Middleware.SessionMiddleware().Invoke);
+                                middlewareStackAction.Invoke(middlewareStack);
 
                                 var application = new StompPipeline(middlewareStack);
 

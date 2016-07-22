@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using REstomp.Middleware;
 
 namespace REstomp.Runner
 {
@@ -12,7 +13,14 @@ namespace REstomp.Runner
 
             using(var reStompService = new StompService(endPoint, parser))
             {
-                reStompService.Start();
+                reStompService.Start((middlewareStack) =>
+                {
+                    middlewareStack.Push(new ProtocolVersionMiddleware().Invoke);
+                    middlewareStack.Push(new SessionMiddleware(new SessionOptions
+                    {
+                        AcceptedVersions = new [] { "1.1", "1.2" }
+                    }).Invoke);
+                });
 
                 Console.WriteLine("Service started.");
 

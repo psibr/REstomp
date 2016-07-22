@@ -28,19 +28,7 @@ namespace REstomp
         {
             await Application.Invoke(environment);
 
-            StompFrame responseFrame = null;
-
-            var command = environment["stomp.reponseMethod"] as string;
-
-            if (!string.IsNullOrWhiteSpace(command) && StompParser.Command.IsSupported(command))
-            {
-                var headers = (ImmutableArray<KeyValuePair<string, string>>)environment["stomp.responseHeaders"];
-                var body = (ImmutableArray<byte>)environment["stomp.responseBody"];
-
-                responseFrame = new StompFrame(command, headers, body);
-            }
-
-            return responseFrame;
+            return environment.ReadFromEnvironmentResponse();
         }
     }
 }
