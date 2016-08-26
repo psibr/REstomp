@@ -1,5 +1,5 @@
-using System;
-using System.Text;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace REstomp
 {
@@ -41,6 +41,53 @@ namespace REstomp
                 return ContentLengthHeader.Empty;
 
             return new ContentLengthHeader(contentLengthHeaderValue);
+        }
+
+        public static IDictionary<string, object> WriteToEnvironmentRequest(this StompFrame frame, IDictionary<string, object> environment)
+        {
+            environment["stomp.requestMethod"] = frame.Command;
+            environment["stomp.requestHeaders"] = frame.Headers;
+            environment["stomp.requestBody"] = frame.Body;
+
+            return environment;
+        }
+
+        public static IDictionary<string, object> WriteToEnvironmentResponse(this StompFrame frame, IDictionary<string, object> environment)
+        {
+            environment["stomp.responseMethod"] = frame.Command;
+            environment["stomp.responseHeaders"] = frame.Headers;
+            environment["stomp.responseBody"] = frame.Body;
+
+            return environment;
+        }
+
+        public static StompFrame ReadFromEnvironmentRequest(this IDictionary<string, object> environment)
+        {
+            var method = environment["stomp.requestMethod"] as string;
+            var headers = (ImmutableArray<KeyValuePair<string, string>>)environment["stomp.requestHeaders"];
+            var body = (ImmutableArray<byte>)environment["stomp.requestBody"];
+
+            if(string.IsNullOrWhiteSpace(method))
+                return StompFrame.Empty;
+
+            return new StompFrame(method, headers, body);
+        }
+
+        public static StompFrame ReadFromEnvironmentResponse(this IDictionary<string, object> environment)
+        {
+            StompFrame responseFrame = null;
+
+            var command = environment["stomp.responseMethod"] as string;
+
+            if (!string.IsNullOrWhiteSpace(command) && StompParser.Command.IsSupported(command))
+            {
+                var headers = (ImmutableArray<KeyValuePair<string, string>>)environment["stomp.responseHeaders"];
+                var body = (ImmutableArray<byte>)environment["stomp.responseBody"];
+
+                responseFrame = new StompFrame(command, headers, body);
+            }
+
+            return responseFrame;
         }
     }
 }

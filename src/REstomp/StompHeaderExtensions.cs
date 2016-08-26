@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 
 namespace REstomp
@@ -8,17 +8,16 @@ namespace REstomp
     public static class StompHeaderExtensions
     {
 
-        public static ImmutableArray<string> UniqueKeys(this ImmutableArray<KeyValuePair<string, string>> headerPairs)
+        public static IDictionary<string, string> UniqueKeys(this ImmutableArray<KeyValuePair<string, string>> headerPairs)
         {
-            List<string> keys = new List<string>();
+            Dictionary<string, string> keys = new Dictionary<string, string>();
 
-            foreach (var keyValuePair in headerPairs)
+            foreach (var keyValuePair in headerPairs.Where(keyValuePair => !keys.ContainsKey(keyValuePair.Key)))
             {
-                if (!keys.Contains(keyValuePair.Key))
-                    keys.Add(keyValuePair.Key);
+                keys.Add(keyValuePair.Key, keyValuePair.Value);
             }
 
-            return keys.ToImmutableArray();
+            return keys;
         }
 
         public static string GetValueOrNull(this ImmutableArray<KeyValuePair<string, string>> headerPairs, string key)
