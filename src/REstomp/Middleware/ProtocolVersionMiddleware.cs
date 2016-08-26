@@ -19,18 +19,18 @@ namespace REstomp.Middleware
             {
                 var requestFrame = environment.ReadFromEnvironmentRequest();
 
-                if(StompCommand.IsConnectRequest(requestFrame.Command))
-                {                    
+                if (StompCommand.IsConnectRequest(requestFrame.Command))
+                {
                     string stompAcceptVersion;
-                    var stompProtocolVersion = requestFrame.Headers.TryGetValue("accept-version", out stompAcceptVersion) 
-                        ? stompAcceptVersion 
+                    var stompProtocolVersion = requestFrame.Headers.TryGetValue("accept-version", out stompAcceptVersion)
+                        ? stompAcceptVersion
                         : "1.0";
 
-                    if(environment.ContainsKey("stomp.protocolVersion"))
+                    if (environment.ContainsKey("stomp.protocolVersion"))
                         environment["stomp.protocolVersion"] = stompProtocolVersion;
                     else
                         environment.Add("stomp.protocolVersion", stompProtocolVersion);
-                }                
+                }
 
                 await next(environment);
             };

@@ -59,7 +59,7 @@ namespace REstomp
                 new[] { SEND, MESSAGE, ERROR }.Contains(command);
 
             public static bool IsConnectRequest(string command) =>
-                new [] { CONNECT, STOMP }.Contains(command);
+                new[] { CONNECT, STOMP }.Contains(command);
         }
 
         /// <summary>
@@ -230,7 +230,7 @@ namespace REstomp
         /// <returns>A tuple of the Stream, resultant StompFrame, and any remainder bytes to be parsed in the body.</returns>
         /// <exception cref="HeaderParseException"></exception>
         public static async Task<Tuple<PrependableStream<TStream>, StompFrame>> ReadStompHeaders<TStream>(
-            PrependableStream<TStream> stream, CancellationToken cancellationToken) 
+            PrependableStream<TStream> stream, CancellationToken cancellationToken)
             where TStream : Stream
         {
             return await ReadStompHeaders(stream, StompFrame.Empty, cancellationToken)
@@ -251,7 +251,7 @@ namespace REstomp
             where TStream : Stream
         {
             //put our headers with values into a dictionary after parsing them
-            var headers = new List<KeyValuePair<string,string>>();
+            var headers = new List<KeyValuePair<string, string>>();
 
             var headerBuffer = new byte[20];
             var bytesFound = 0;
@@ -340,7 +340,7 @@ namespace REstomp
 
             //throw an exception if a header is null or white space or if a value is null
             if (headerSegments.Any(segment =>
-                segment.Length != 2 
+                segment.Length != 2
                     || string.IsNullOrWhiteSpace(segment[0])))
             {
                 var relevantBytes = new byte[bytesFound - parserIndex];
@@ -448,7 +448,7 @@ namespace REstomp
             else
             {
                 var bodyBuffer = new byte[20];
-                
+
                 //if we don't have a content length, just read until we find a 0x00 null byte
                 while (!bodyList.Any() || bodyList.Last() != 0x00)
                 {
@@ -473,7 +473,7 @@ namespace REstomp
                     {
                         bodyList.Add(bodyBuffer[i]);
 
-                        if(bodyBuffer[i] == 0x00)
+                        if (bodyBuffer[i] == 0x00)
                             break;
                     }
                 }
@@ -489,7 +489,7 @@ namespace REstomp
         }
 
 
-        public async Task<Tuple<TStream, StompFrame>> ReadStompFrame<TStream>(TStream stream, CancellationToken cancellationToken) 
+        public async Task<Tuple<TStream, StompFrame>> ReadStompFrame<TStream>(TStream stream, CancellationToken cancellationToken)
             where TStream : Stream
         {
             var result = await stream.AsPrependableStream()
@@ -527,12 +527,14 @@ namespace REstomp
 
             foreach (var header in frame.Headers)
             {
-                byteList.AddRange(Encoding.UTF8.GetBytes($"{header.Key}:{header.Value}\n"));    
+                byteList.AddRange(Encoding.UTF8.GetBytes($"{header.Key}:{header.Value}\n"));
             }
 
             byteList.AddRange(Encoding.UTF8.GetBytes("\n"));
 
-            byteList.AddRange(((frame.Body.IsDefault) ? new byte[0].ToImmutableArray() : frame.Body).Union(new [] { (byte)0x00 }));
+            byteList.AddRange(((frame.Body.IsDefault) ? new byte[0].ToImmutableArray() : frame.Body));
+
+            byteList.AddRange(new[] { (byte)0x00 });
 
             return byteList.ToArray();
         }

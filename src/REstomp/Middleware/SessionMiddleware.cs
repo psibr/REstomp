@@ -7,7 +7,7 @@ using System.Linq;
 namespace REstomp.Middleware
 {
     using StompCommand = StompParser.Command;
-    using AppFunc = Func<IDictionary<string, object>, Task>;    
+    using AppFunc = Func<IDictionary<string, object>, Task>;
 
     public class SessionMiddleware
     {
@@ -34,12 +34,22 @@ namespace REstomp.Middleware
 
                     if(Options.AcceptedVersions.Contains(version))
                     {
+                        var sessionId = Guid.NewGuid().ToString();
                         new StompFrame(StompCommand.CONNECTED, new Dictionary<string, string>
                         {
                             ["version"] = version,
-                            ["session"] = Guid.NewGuid().ToString()
+                            ["session"] = sessionId
 
                         }).WriteToEnvironmentResponse(environment);
+
+                        //Give other middleware a chance to disagree.
+                        await next(environment);
+
+                        //If there wasn't a disagreement.
+                        if((string)environment["stomp.responseMethod"] == StompCommand.CONNECTED)
+                        {
+                            Options.AddSession(sessionId);
+                        }
                     }
                     else
                     {
@@ -69,7 +79,7 @@ namespace REstomp.Middleware
                     {
                         new StompFrame(StompCommand.ERROR, new Dictionary<string, string>{
                             { "message", "Session not established." }
-                        }).WriteToEnvironmentResponse(environment); 
+                        }).WriteToEnvironmentResponse(environment);
                     }
                 }
             };
@@ -89,6 +99,6 @@ namespace REstomp.Middleware
         public Func<string, bool> ValidateSession { get; set; } = (sessionId) =>
             SessionIdentifiers.Contains(sessionId);
 
-        private static readonly IList<string> SessionIdentifiers = new List<string>(); 
+        private static readonly IList<string> SessionIdentifiers = new List<string>();
     }
 }

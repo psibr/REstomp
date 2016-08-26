@@ -10,6 +10,7 @@ namespace REstomp
     public class StompFrame
     {
         public StompFrame(string command, IEnumerable<KeyValuePair<string, string>> headers, byte[] body)
+
         {
             Command = command;
             Headers = headers?.ToImmutableArray() ?? ImmutableArray<KeyValuePair<string, string>>.Empty;

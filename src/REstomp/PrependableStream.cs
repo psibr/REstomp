@@ -48,7 +48,7 @@ namespace REstomp
         /// <param name="prependBytes"></param>
         protected virtual void Prepend(IEnumerable<byte> prependBytes)
         {
-            PrependedBytes = prependBytes.Union(PrependedBytes).ToList();
+            PrependedBytes = prependBytes.Concat(PrependedBytes).ToList();
         }
 
         public override bool CanRead =>
