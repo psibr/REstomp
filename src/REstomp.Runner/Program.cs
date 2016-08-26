@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using REstomp.Client;
 using REstomp.Middleware;
 
 namespace REstomp.Runner
@@ -15,14 +16,16 @@ namespace REstomp.Runner
             {
                 reStompService.Start((middlewareStack) =>
                 {
+                    middlewareStack.Push(new TerminationMiddleware().Invoke);
                     middlewareStack.Push(new ProtocolVersionMiddleware().Invoke);
-                    middlewareStack.Push(new SessionMiddleware(new SessionOptions
-                    {
-                        AcceptedVersions = new [] { "1.1", "1.2" }
-                    }).Invoke);
+                    middlewareStack.Push(new SessionMiddleware().Invoke);
                 });
 
                 Console.WriteLine("Service started.");
+
+                var client = new StompClient();
+
+                var connected = client.TryConnect("127.0.0.1", 5467).Result;
 
                 Console.ReadLine();
             }

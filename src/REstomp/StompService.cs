@@ -31,59 +31,69 @@ namespace REstomp
 
         public void Start(Action<Stack<MidFunc>> middlewareStackAction)
         {
-            Listener.Start();
-
-            while (!CancellationSource.IsCancellationRequested)
+            Task.Run(() =>
             {
-                if (Listener.Pending())
+                Listener.Start();
+
+                while (!CancellationSource.IsCancellationRequested)
                 {
-                    Listener.AcceptTcpClientAsync()
-                        .ContinueWith(async (tcpClientTask) =>
-                        {
-                            if (tcpClientTask.IsCompleted && tcpClientTask.Result != null)
+                    if (Listener.Pending())
+                    {
+                        Listener.AcceptTcpClientAsync()
+                            .ContinueWith(async (tcpClientTask) =>
                             {
-                                var tcpClient = tcpClientTask.Result;
-                                var netStream = tcpClient.GetStream();
-
-                                var middlewareStack = new Stack<MidFunc>();
-
-                                middlewareStackAction.Invoke(middlewareStack);
-
-                                var application = new StompPipeline(middlewareStack);
-
-                                while (!CancellationSource.IsCancellationRequested && tcpClient.Connected)
+                                if (tcpClientTask.IsCompleted && tcpClientTask.Result != null)
                                 {
-                                    var frame = await Parser.ReadStompFrame(netStream, CancellationSource.Token).UnWrapFrame();
-
-                                    var environment = new Dictionary<string, object>();
-
-                                    environment.Add("stomp.requestMethod", frame.Command);
-                                    environment.Add("stomp.requestHeaders", frame.Headers);
-                                    environment.Add("stomp.requestBody", frame.Body);
-
-                                    environment.Add("stomp.responseMethod", null);
-                                    environment.Add("stomp.responseHeaders", new Dictionary<string, string>().ToImmutableArray());
-                                    environment.Add("stomp.responseBody", new byte[0].ToImmutableArray());
-
-                                    var responseFrame = await application.Process(environment);
-
-                                    if (responseFrame != null)
+                                    using (var tcpClient = tcpClientTask.Result)
+                                    using (var netStream = tcpClient.GetStream())
                                     {
-                                        Parser.WriteStompFrame(netStream, responseFrame);
+                                        var middlewareStack = new Stack<MidFunc>();
 
-                                        var terminatingCommands = new[] { StompCommand.DISCONNECT, StompCommand.ERROR };
-                                        if (terminatingCommands.Contains(responseFrame.Command))
-                                            break;
+                                        middlewareStackAction.Invoke(middlewareStack);
+
+                                        var application = new StompPipeline(middlewareStack);
+
+                                        while (!CancellationSource.IsCancellationRequested && tcpClient.Connected)
+                                        {
+                                            var frame = await Parser
+                                                .ReadStompFrame(netStream, CancellationSource.Token)
+                                                .UnWrapFrame();
+
+                                            var environment = new Dictionary<string, object>
+                                            {
+                                                ["stomp.requestMethod"] = frame.Command,
+                                                ["stomp.requestHeaders"] = frame.Headers,
+                                                ["stomp.requestBody"] = frame.Body,
+                                                ["stomp.responseMethod"] = null,
+                                                ["stomp.responseHeaders"] = new Dictionary<string, string>().ToImmutableArray(),
+                                                ["stomp.responseBody"] = new byte[0].ToImmutableArray(),
+                                                ["stomp.terminateConnection"] = false
+                                            };
+
+                                            var responseFrame = await application.Process(environment);
+
+                                            if (responseFrame != null)
+                                            {
+                                                Parser.WriteStompFrame(netStream, responseFrame);
+
+                                                var terminatingCommands = new[]
+                                                    {StompCommand.DISCONNECT, StompCommand.ERROR};
+                                                if (terminatingCommands.Contains(responseFrame.Command))
+                                                    break;
+                                            }
+                                        }
+
+                                        Thread.Sleep(1000);
                                     }
                                 }
-                            }
-                        });
+                            });
+                    }
+                    else
+                    {
+                        Thread.Sleep(20);
+                    }
                 }
-                else
-                {
-                    Thread.Sleep(20);
-                }
-            }
+            });
         }
 
         public void Stop()

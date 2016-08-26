@@ -116,7 +116,6 @@ namespace REstomp
             PrependableStream<TStream> stream, StompFrame stompFrame, CancellationToken cancellationToken)
             where TStream : Stream
         {
-            var originalStreamPosition = stream.Position;
             string command = null;
 
             //Create a new buffer, maximum possible allowed bytes in the line is 13
@@ -466,6 +465,8 @@ namespace REstomp
                         throw;
                     }
 
+
+
                     var bytesFound = await stream.ReadAsync(bodyBuffer, 0, bodyBuffer.Length, cancellationToken);
 
                     for (int i = 0; i < bytesFound; i++)
@@ -531,7 +532,7 @@ namespace REstomp
 
             byteList.AddRange(Encoding.UTF8.GetBytes("\n"));
 
-            byteList.AddRange(frame.Body.Union(new [] { (byte)0x00 }));
+            byteList.AddRange(((frame.Body.IsDefault) ? new byte[0].ToImmutableArray() : frame.Body).Union(new [] { (byte)0x00 }));
 
             return byteList.ToArray();
         }

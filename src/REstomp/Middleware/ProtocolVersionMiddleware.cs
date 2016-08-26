@@ -15,19 +15,16 @@ namespace REstomp.Middleware
         }
 
         public AppFunc Invoke(AppFunc next) =>
-            async (IDictionary<string, object> environment) =>
+            async environment =>
             {
                 var requestFrame = environment.ReadFromEnvironmentRequest();
-
-                string stompProtocolVersion;
 
                 if(StompCommand.IsConnectRequest(requestFrame.Command))
                 {                    
                     string stompAcceptVersion;
-                    if(requestFrame.Headers.TryGetValue("accept-version", out stompAcceptVersion))
-                        stompProtocolVersion = "1.0";
-                    else
-                        stompProtocolVersion = stompAcceptVersion;
+                    var stompProtocolVersion = requestFrame.Headers.TryGetValue("accept-version", out stompAcceptVersion) 
+                        ? stompAcceptVersion 
+                        : "1.0";
 
                     if(environment.ContainsKey("stomp.protocolVersion"))
                         environment["stomp.protocolVersion"] = stompProtocolVersion;

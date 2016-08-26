@@ -11,7 +11,7 @@ namespace REstomp.Middleware
 
     public class SessionMiddleware
     {
-        private SessionOptions Options;
+        private SessionOptions Options { get; }
 
         public SessionMiddleware(SessionOptions options = null)
         {
@@ -19,7 +19,7 @@ namespace REstomp.Middleware
         }
 
         public AppFunc Invoke(AppFunc next) =>
-            async (IDictionary<string, object> environment) =>
+            async environment =>
             {
                 var stompCommand = (string)environment["stomp.requestMethod"];
 
@@ -27,7 +27,7 @@ namespace REstomp.Middleware
                 {
                     string version;
                     object versionObject;
-                    if(environment.TryGetValue("stomp.protocolVersion", out versionObject))
+                    if(!environment.TryGetValue("stomp.protocolVersion", out versionObject))
                         version = "1.0";
                     else
                         version = versionObject as string;
@@ -36,7 +36,9 @@ namespace REstomp.Middleware
                     {
                         new StompFrame(StompCommand.CONNECTED, new Dictionary<string, string>
                         {
-                            { "version", version }
+                            ["version"] = version,
+                            ["session"] = Guid.NewGuid().ToString()
+
                         }).WriteToEnvironmentResponse(environment);
                     }
                     else
@@ -79,7 +81,7 @@ namespace REstomp.Middleware
         /// Versions of STOMP this application will accept. Defaults to 1.2 only.
         /// </summary>
         /// <returns>Accepted STOMP versions</returns>
-        public string[] AcceptedVersions { get; set; } = new [] { "1.2" };
+        public string[] AcceptedVersions { get; set; } = { "1.2" };
 
         public Action<string> AddSession { get; set; } = (sessionId) =>
             SessionIdentifiers.Add(sessionId);
@@ -87,6 +89,6 @@ namespace REstomp.Middleware
         public Func<string, bool> ValidateSession { get; set; } = (sessionId) =>
             SessionIdentifiers.Contains(sessionId);
 
-        private static IList<string> SessionIdentifiers = new List<string>(); 
+        private static readonly IList<string> SessionIdentifiers = new List<string>(); 
     }
 }

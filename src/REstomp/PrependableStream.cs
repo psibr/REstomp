@@ -98,11 +98,13 @@ namespace REstomp
                     prependedBytesRead++;
 
                 }
+
+                bytesRead += prependedBytesRead;
             }
-
-            bytesRead += prependedBytesRead;
-
-            bytesRead += BaseStream.Read(buffer, offset + bytesRead, count - bytesRead);
+            else
+            {
+                bytesRead += BaseStream.Read(buffer, offset, count);
+            }
 
             PrependedBytes = PrependedBytes.Skip(prependedBytesRead).ToList();
 

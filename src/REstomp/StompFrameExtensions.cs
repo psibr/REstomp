@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Text;
 
 namespace REstomp
 {
@@ -79,7 +77,7 @@ namespace REstomp
         {
             StompFrame responseFrame = null;
 
-            var command = environment["stomp.reponseMethod"] as string;
+            var command = environment["stomp.responseMethod"] as string;
 
             if (!string.IsNullOrWhiteSpace(command) && StompParser.Command.IsSupported(command))
             {

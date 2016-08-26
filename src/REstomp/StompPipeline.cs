@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using System.Collections.Immutable;
 
 namespace REstomp
 {
-
     using AppFunc = Func<IDictionary<string, object>, Task>;
     using MidFunc = Func<Func<IDictionary<string, object>, Task>, Func<IDictionary<string, object>, Task>>;
 
@@ -15,13 +13,16 @@ namespace REstomp
 
         public StompPipeline(Stack<MidFunc> builder)
         {
-            AppFunc current = (IDictionary<string, object> environment) => Task.CompletedTask;
+            AppFunc currentMiddleware = (IDictionary<string, object> environment) 
+                => Task.CompletedTask;
+
+            //Here we pop the stack and pass the previous middleware.
             while (builder.Count > 0)
             {
-                current = builder.Pop().Invoke(current);
+                currentMiddleware = builder.Pop().Invoke(currentMiddleware);
             }
 
-            Application = current;
+            Application = currentMiddleware;
         }
 
         public async Task<StompFrame> Process(IDictionary<string, object> environment)
