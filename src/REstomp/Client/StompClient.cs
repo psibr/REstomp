@@ -57,8 +57,6 @@ namespace REstomp.Client
                 ["accept-version"] = "1.2"
             }));
 
-            Thread.Sleep(5000);
-
             var response = await Parser.ReadStompFrame(NetStream).UnWrapFrame();
 
             var headers = response.Headers.UniqueKeys();

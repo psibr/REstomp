@@ -1,17 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "REstomp", "src\REstomp\REstomp.xproj", "{7F04800A-0B72-4E20-A8BD-0134E51E8C25}"
-EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "REstomp.Runner", "src\REstomp.Runner\REstomp.Runner.xproj", "{B55F44D1-B034-43FE-BF00-7FDF0F25BCD6}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5EA9FF47-8F30-482D-B6F4-63D763F9512D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{D27E3C30-CE70-4DD3-ACC9-97A654B2E372}"
 EndProject
-Project("{8BB2217D-0F2D-49D1-97BC-3654ED321F3B}") = "REstomp.Test", "test\REstomp.Test\REstomp.Test.xproj", "{6A08A7C2-3AB9-4879-AC7C-DE55B062279B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "REstomp", "src\REstomp\REstomp.csproj", "{7F04800A-0B72-4E20-A8BD-0134E51E8C25}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "REstomp.Runner", "src\REstomp.Runner\REstomp.Runner.csproj", "{B55F44D1-B034-43FE-BF00-7FDF0F25BCD6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "REstomp.Test", "test\REstomp.Test\REstomp.Test.csproj", "{6A08A7C2-3AB9-4879-AC7C-DE55B062279B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,5 +39,8 @@ Global
 		{7F04800A-0B72-4E20-A8BD-0134E51E8C25} = {5EA9FF47-8F30-482D-B6F4-63D763F9512D}
 		{B55F44D1-B034-43FE-BF00-7FDF0F25BCD6} = {5EA9FF47-8F30-482D-B6F4-63D763F9512D}
 		{6A08A7C2-3AB9-4879-AC7C-DE55B062279B} = {D27E3C30-CE70-4DD3-ACC9-97A654B2E372}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {174AEFF1-2288-44F0-976A-688406FC30FC}
 	EndGlobalSection
 EndGlobal

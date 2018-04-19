@@ -82,15 +82,13 @@ namespace REstomp
                                                     break;
                                             }
                                         }
-
-                                        Thread.Sleep(1000);
                                     }
                                 }
                             });
                     }
                     else
                     {
-                        Thread.Sleep(20);
+                        Thread.Sleep(1);
                     }
                 }
             });
